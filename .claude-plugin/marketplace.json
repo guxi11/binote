@@ -14,9 +14,14 @@
         "package": "roammem"
       },
       "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .roam/ with [[wiki-style links]]",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "category": "developer-tools",
-      "tags": ["mcp", "memory", "knowledge-graph", "bidirectional-links"],
+      "tags": [
+        "mcp",
+        "memory",
+        "knowledge-graph",
+        "bidirectional-links"
+      ],
       "mcpServers": {
         "roammem": {
           "command": "roammem"
