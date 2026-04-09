@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## [0.1.5] - 2026-04-09
+
+### Features
+
+- Improve performance
 ## [0.1.4] - 2026-04-09
 
 ### Features
@@ -12,5 +18,5 @@ All notable changes to this project will be documented in this file.
 
 - Add changelog and use changenotes to manage it
 
-
+[0.1.5]: https://github.com/guxi11/roammem/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/guxi11/roammem/releases/tag/v0.1.4
