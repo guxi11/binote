@@ -4,15 +4,14 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { makeConfig, projectPathToNotePath, dirToNotePath, shouldMirror } from "./core/roam-paths.js";
+import { makeConfig, projectPathToNotePath, dirToNotePath, shouldMirror, resolveLinkDetailed, notePathToProjectPath, isDirNote, isStandaloneNote } from "./core/roam-paths.js";
 import { scanProjectStructure, scanExistingNotes } from "./core/scanner.js";
 import { readNote, writeNote, noteExists } from "./core/note-io.js";
 import { getOrBuildIndex, buildIndex, saveIndex, invalidateIndex } from "./core/link-index.js";
+import { searchNotes } from "./core/search.js";
 import { sync } from "./core/sync-engine.js";
-import { dirNoteTemplate } from "./util/markdown.js";
 import { ensureDir } from "./util/fs-helpers.js";
 import { pkg } from "./util/pkg.js";
-import type { SearchHit } from "./types.js";
 
 const server = new McpServer({
   name: pkg.name,
@@ -41,13 +40,13 @@ server.registerTool(
     for (const dir of dirs) {
       const notePath = dirToNotePath(dir);
       if (!(await noteExists(config, notePath))) {
-        await writeNote(config, notePath, dirNoteTemplate(dir));
+        await writeNote(config, notePath, "");
         created++;
       }
     }
 
     if (!(await noteExists(config, "_dir.md"))) {
-      await writeNote(config, "_dir.md", dirNoteTemplate(projectRoot.split("/").pop() ?? "project"));
+      await writeNote(config, "_dir.md", "");
       created++;
     }
 
@@ -82,22 +81,63 @@ server.registerTool(
 
 // ── read_note ─────────────────────────────────────────────────────────
 
+const sliceWindow = (text: string, path: string, from?: number, to?: number): string => {
+  if (from === undefined && to === undefined) return text;
+  const lines = text.split("\n");
+  const lo = Math.max(1, from ?? 1);
+  const hi = Math.min(lines.length, to ?? lines.length);
+  return `# lines ${lo}-${hi} of total ${lines.length} in ${path}\n${lines.slice(lo - 1, hi).join("\n")}`;
+};
+
+/** Sentinel for empty notes — tells the LLM where to look instead of returning ''. */
+const emptyNoteHint = (notePath: string): string => {
+  if (isStandaloneNote(notePath)) return `(empty standalone note: ${notePath})`;
+  if (isDirNote(notePath)) {
+    const dir = notePath.replace(/\/?_dir\.md$/, "") || ".";
+    return `(empty dir note — list directory: ${dir})`;
+  }
+  const projectPath = notePathToProjectPath(notePath);
+  return projectPath
+    ? `(empty note — read source file: ${projectPath})`
+    : `(empty note: ${notePath})`;
+};
+
+const renderNote = (text: string, path: string, from?: number, to?: number): string =>
+  text.length === 0 ? emptyNoteHint(path) : sliceWindow(text, path, from, to);
+
 server.registerTool(
   "read_note",
   {
-    description: "Read a RoamMem note. Path is relative to .roam/ (e.g. 'src/index.ts.md', '_notes/arch.md', 'src/_dir.md')",
+    description: "Read one or more RoamMem notes. Path is relative to .roam/ (e.g. 'src/index.ts.md'). Use notePaths for batch reads, from/to for line ranges.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
-      notePath: z.string().describe("Path to the note relative to .roam/"),
+      notePath: z.string().optional().describe("Single note path; ignored if notePaths is provided"),
+      notePaths: z.array(z.string()).optional().describe("Batch read; returns {[path]: content|null}"),
+      from: z.number().int().positive().optional().describe("1-indexed start line (inclusive)"),
+      to: z.number().int().positive().optional().describe("1-indexed end line (inclusive)"),
     },
   },
-  async ({ projectRoot, notePath }) => {
+  async ({ projectRoot, notePath, notePaths, from, to }) => {
     const config = makeConfig(projectRoot);
+
+    if (notePaths && notePaths.length > 0) {
+      const entries = await Promise.all(
+        notePaths.map(async (p): Promise<readonly [string, string | null]> => {
+          const c = await readNote(config, p);
+          return [p, c === null ? null : renderNote(c, p, from, to)];
+        })
+      );
+      return { content: [{ type: "text" as const, text: JSON.stringify(Object.fromEntries(entries), null, 2) }] };
+    }
+
+    if (!notePath) {
+      return { content: [{ type: "text" as const, text: "Provide notePath or notePaths" }], isError: true };
+    }
     const content = await readNote(config, notePath);
     if (content === null) {
       return { content: [{ type: "text" as const, text: `Note not found: ${notePath}` }], isError: true };
     }
-    return { content: [{ type: "text" as const, text: content }] };
+    return { content: [{ type: "text" as const, text: renderNote(content, notePath, from, to) }] };
   }
 );
 
@@ -135,7 +175,7 @@ server.registerTool(
 server.registerTool(
   "query_links",
   {
-    description: "Get forward links (outgoing) and backlinks (incoming) for a note. Rebuilds index if needed.",
+    description: "Get forward links and backlinks for a note. Returns flat lists plus detailed line-aware variants and any dangling [[X]] from this note.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       notePath: z.string().describe("Path to the note relative to .roam/"),
@@ -145,14 +185,22 @@ server.registerTool(
     const config = makeConfig(projectRoot);
     const index = await getOrBuildIndex(config);
 
-    const forward = index.forward[notePath] ?? [];
-    const backlinks = index.reverse[notePath] ?? [];
+    const forwardDetails = index.links[notePath] ?? [];
+    const backlinkDetails = index.backlinks[notePath] ?? [];
+    const danglingFromHere = forwardDetails.filter((r) => r.resolved === null);
 
     return {
       content: [
         {
           type: "text" as const,
-          text: JSON.stringify({ notePath, forward, backlinks }, null, 2),
+          text: JSON.stringify({
+            notePath,
+            forward: index.forward[notePath] ?? [],
+            backlinks: index.reverse[notePath] ?? [],
+            forwardDetails,
+            backlinkDetails,
+            dangling: danglingFromHere,
+          }, null, 2),
         },
       ],
     };
@@ -164,49 +212,55 @@ server.registerTool(
 server.registerTool(
   "search",
   {
-    description: "Full-text search across all RoamMem notes. Returns matching lines with context.",
+    description: "Full-text search across all RoamMem notes. Hits include resolved [[link]] targets on the matched line — use those instead of a follow-up query_links.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       query: z.string().describe("Search query (plain text or regex)"),
       regex: z.boolean().optional().describe("Treat query as regex (default: false)"),
       maxResults: z.number().optional().describe("Max results (default: 20)"),
+      contextLines: z.number().int().nonnegative().optional().describe("Lines above and below the match (default: 1 → 3-line window)"),
     },
   },
-  async ({ projectRoot, query, regex, maxResults }) => {
+  async ({ projectRoot, query, regex, maxResults, contextLines }) => {
     const config = makeConfig(projectRoot);
-    const notes = await scanExistingNotes(config);
-    const limit = maxResults ?? 20;
-    const pattern = regex ? new RegExp(query, "gi") : null;
-    const hits: SearchHit[] = [];
-
-    for (const notePath of notes) {
-      if (hits.length >= limit) break;
-      const content = await readNote(config, notePath);
-      if (!content) continue;
-
-      const lines = content.split("\n");
-      lines.forEach((line, i) => {
-        if (hits.length >= limit) return;
-        const match = pattern ? pattern.test(line) : line.toLowerCase().includes(query.toLowerCase());
-        if (pattern) pattern.lastIndex = 0;
-        if (match) {
-          const start = Math.max(0, i - 2);
-          const end = Math.min(lines.length, i + 3);
-          hits.push({
-            notePath,
-            lineNumber: i + 1,
-            lineContent: line,
-            context: lines.slice(start, end).join("\n"),
-          });
-        }
-      });
-    }
+    const hits = await searchNotes(config, query, { regex, maxResults, contextLines });
 
     return {
       content: [
         {
           type: "text" as const,
           text: JSON.stringify({ query, totalHits: hits.length, hits }, null, 2),
+        },
+      ],
+    };
+  }
+);
+
+// ── resolve_link ──────────────────────────────────────────────────────
+
+server.registerTool(
+  "resolve_link",
+  {
+    description: "Resolve a [[target]] string to a concrete note path. Returns candidates if ambiguous. Falls back to substring matching for typos. Use before chasing a link whose destination isn't obvious.",
+    inputSchema: {
+      projectRoot: z.string().describe("Absolute path to the project root"),
+      target: z.string().describe("The text inside [[...]], e.g. 'multiset-not-diff'"),
+    },
+  },
+  async ({ projectRoot, target }) => {
+    const config = makeConfig(projectRoot);
+    const notes = await scanExistingNotes(config);
+    const detail = resolveLinkDetailed(target, notes);
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify({
+            target,
+            resolved: detail.resolved,
+            candidates: detail.candidates,
+            strategy: detail.strategy,
+          }, null, 2),
         },
       ],
     };
@@ -254,8 +308,9 @@ server.registerTool(
     const index = await buildIndex(config);
     await saveIndex(config, index);
 
-    const noteCount = Object.keys(index.forward).length;
-    const linkCount = Object.values(index.forward).reduce((n, links) => n + links.length, 0);
+    const noteCount = Object.keys(index.links).length;
+    const linkCount = Object.values(index.links).reduce((n, refs) => n + refs.length, 0);
+    const danglingCount = Object.keys(index.dangling).length;
 
     return {
       content: [
@@ -266,6 +321,7 @@ server.registerTool(
             indexPath: config.indexPath,
             notes: noteCount,
             links: linkCount,
+            dangling: danglingCount,
           }, null, 2),
         },
       ],

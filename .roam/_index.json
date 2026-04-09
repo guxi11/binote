@@ -1,34 +1,848 @@
 {
+  "version": 2,
+  "links": {
+    ".changes/_dir.md": [],
+    ".claude-plugin/_dir.md": [],
+    "_dir.md": [
+      {
+        "raw": "wiki-style links",
+        "lineNumber": 5,
+        "resolved": null,
+        "candidates": []
+      },
+      {
+        "raw": "src",
+        "lineNumber": 21,
+        "resolved": "src/_dir.md"
+      },
+      {
+        "raw": "commands",
+        "lineNumber": 22,
+        "resolved": "commands/_dir.md"
+      }
+    ],
+    "commands/_dir.md": [
+      {
+        "raw": "commands/roam.md",
+        "lineNumber": 18,
+        "resolved": "commands/roam.md.md"
+      }
+    ],
+    "commands/roam.md.md": [
+      {
+        "raw": "commands/_dir.md",
+        "lineNumber": 36,
+        "resolved": "commands/_dir.md"
+      },
+      {
+        "raw": "_dir.md",
+        "lineNumber": 37,
+        "resolved": "_dir.md"
+      }
+    ],
+    "scripts/_dir.md": [],
+    "scripts/sync-version.mjs.md": [],
+    "src/_dir.md": [
+      {
+        "raw": "src/core",
+        "lineNumber": 22,
+        "resolved": "src/core/_dir.md"
+      },
+      {
+        "raw": "src/util",
+        "lineNumber": 23,
+        "resolved": "src/util/_dir.md"
+      },
+      {
+        "raw": "index.ts",
+        "lineNumber": 24,
+        "resolved": "src/index.ts.md"
+      },
+      {
+        "raw": "cli.ts",
+        "lineNumber": 25,
+        "resolved": "src/cli.ts.md"
+      },
+      {
+        "raw": "types.ts",
+        "lineNumber": 26,
+        "resolved": "src/types.ts.md"
+      }
+    ],
+    "src/cli.ts.md": [
+      {
+        "raw": "index.ts",
+        "lineNumber": 20,
+        "resolved": "src/index.ts.md"
+      },
+      {
+        "raw": "roam-paths.ts",
+        "lineNumber": 21,
+        "resolved": "src/core/roam-paths.ts.md"
+      },
+      {
+        "raw": "scanner.ts",
+        "lineNumber": 22,
+        "resolved": "src/core/scanner.ts.md"
+      },
+      {
+        "raw": "note-io.ts",
+        "lineNumber": 23,
+        "resolved": "src/core/note-io.ts.md"
+      },
+      {
+        "raw": "link-index.ts",
+        "lineNumber": 24,
+        "resolved": "src/core/link-index.ts.md"
+      },
+      {
+        "raw": "sync-engine.ts",
+        "lineNumber": 25,
+        "resolved": "src/core/sync-engine.ts.md"
+      },
+      {
+        "raw": "markdown.ts",
+        "lineNumber": 26,
+        "resolved": "src/util/markdown.ts.md"
+      },
+      {
+        "raw": "fs-helpers.ts",
+        "lineNumber": 27,
+        "resolved": "src/util/fs-helpers.ts.md"
+      }
+    ],
+    "src/core/_dir.md": [
+      {
+        "raw": "link",
+        "lineNumber": 11,
+        "resolved": null,
+        "candidates": [
+          "src/core/link-index.ts.md",
+          "src/core/link-parser.ts.md"
+        ]
+      },
+      {
+        "raw": "src",
+        "lineNumber": 23,
+        "resolved": "src/_dir.md"
+      },
+      {
+        "raw": "src/util",
+        "lineNumber": 24,
+        "resolved": "src/util/_dir.md"
+      }
+    ],
+    "src/core/link-index.ts.md": [
+      {
+        "raw": "scanner.ts",
+        "lineNumber": 22,
+        "resolved": "src/core/scanner.ts.md"
+      },
+      {
+        "raw": "note-io.ts",
+        "lineNumber": 23,
+        "resolved": "src/core/note-io.ts.md"
+      },
+      {
+        "raw": "link-parser.ts",
+        "lineNumber": 24,
+        "resolved": "src/core/link-parser.ts.md"
+      },
+      {
+        "raw": "roam-paths.ts",
+        "lineNumber": 25,
+        "resolved": "src/core/roam-paths.ts.md"
+      },
+      {
+        "raw": "fs-helpers.ts",
+        "lineNumber": 26,
+        "resolved": "src/util/fs-helpers.ts.md"
+      },
+      {
+        "raw": "types.ts",
+        "lineNumber": 27,
+        "resolved": "src/types.ts.md"
+      }
+    ],
+    "src/core/link-parser.ts.md": [
+      {
+        "raw": "wiki link",
+        "lineNumber": 5,
+        "resolved": null,
+        "candidates": []
+      },
+      {
+        "raw": "b",
+        "lineNumber": 5,
+        "resolved": null,
+        "candidates": []
+      },
+      {
+        "raw": "oldTarget",
+        "lineNumber": 10,
+        "resolved": null,
+        "candidates": []
+      },
+      {
+        "raw": "link-index.ts",
+        "lineNumber": 19,
+        "resolved": "src/core/link-index.ts.md"
+      },
+      {
+        "raw": "roam-paths.ts",
+        "lineNumber": 20,
+        "resolved": "src/core/roam-paths.ts.md"
+      }
+    ],
+    "src/core/note-io.ts.md": [
+      {
+        "raw": "roam-paths.ts",
+        "lineNumber": 21,
+        "resolved": "src/core/roam-paths.ts.md"
+      },
+      {
+        "raw": "fs-helpers.ts",
+        "lineNumber": 22,
+        "resolved": "src/util/fs-helpers.ts.md"
+      },
+      {
+        "raw": "link-index.ts",
+        "lineNumber": 23,
+        "resolved": "src/core/link-index.ts.md"
+      },
+      {
+        "raw": "sync-engine.ts",
+        "lineNumber": 24,
+        "resolved": "src/core/sync-engine.ts.md"
+      }
+    ],
+    "src/core/roam-paths.ts.md": [
+      {
+        "raw": "link",
+        "lineNumber": 5,
+        "resolved": null,
+        "candidates": [
+          "src/core/link-index.ts.md",
+          "src/core/link-parser.ts.md"
+        ]
+      },
+      {
+        "raw": "filename.ts",
+        "lineNumber": 22,
+        "resolved": null,
+        "candidates": []
+      },
+      {
+        "raw": "filename",
+        "lineNumber": 22,
+        "resolved": null,
+        "candidates": []
+      },
+      {
+        "raw": "types.ts",
+        "lineNumber": 27,
+        "resolved": "src/types.ts.md"
+      },
+      {
+        "raw": "scanner.ts",
+        "lineNumber": 28,
+        "resolved": "src/core/scanner.ts.md"
+      },
+      {
+        "raw": "note-io.ts",
+        "lineNumber": 29,
+        "resolved": "src/core/note-io.ts.md"
+      },
+      {
+        "raw": "link-index.ts",
+        "lineNumber": 30,
+        "resolved": "src/core/link-index.ts.md"
+      },
+      {
+        "raw": "sync-engine.ts",
+        "lineNumber": 31,
+        "resolved": "src/core/sync-engine.ts.md"
+      },
+      {
+        "raw": "index.ts",
+        "lineNumber": 32,
+        "resolved": "src/index.ts.md"
+      },
+      {
+        "raw": "cli.ts",
+        "lineNumber": 33,
+        "resolved": "src/cli.ts.md"
+      }
+    ],
+    "src/core/scanner.ts.md": [
+      {
+        "raw": "fs-helpers.ts",
+        "lineNumber": 20,
+        "resolved": "src/util/fs-helpers.ts.md"
+      },
+      {
+        "raw": "roam-paths.ts",
+        "lineNumber": 21,
+        "resolved": "src/core/roam-paths.ts.md"
+      },
+      {
+        "raw": "link-index.ts",
+        "lineNumber": 22,
+        "resolved": "src/core/link-index.ts.md"
+      },
+      {
+        "raw": "sync-engine.ts",
+        "lineNumber": 23,
+        "resolved": "src/core/sync-engine.ts.md"
+      }
+    ],
+    "src/core/search.ts.md": [],
+    "src/core/sync-engine.ts.md": [
+      {
+        "raw": "scanner.ts",
+        "lineNumber": 20,
+        "resolved": "src/core/scanner.ts.md"
+      },
+      {
+        "raw": "note-io.ts",
+        "lineNumber": 21,
+        "resolved": "src/core/note-io.ts.md"
+      },
+      {
+        "raw": "roam-paths.ts",
+        "lineNumber": 22,
+        "resolved": "src/core/roam-paths.ts.md"
+      },
+      {
+        "raw": "link-index.ts",
+        "lineNumber": 23,
+        "resolved": "src/core/link-index.ts.md"
+      },
+      {
+        "raw": "types.ts",
+        "lineNumber": 24,
+        "resolved": "src/types.ts.md"
+      }
+    ],
+    "src/index.ts.md": [
+      {
+        "raw": "cli.ts",
+        "lineNumber": 20,
+        "resolved": "src/cli.ts.md"
+      },
+      {
+        "raw": "roam-paths.ts",
+        "lineNumber": 21,
+        "resolved": "src/core/roam-paths.ts.md"
+      },
+      {
+        "raw": "scanner.ts",
+        "lineNumber": 22,
+        "resolved": "src/core/scanner.ts.md"
+      },
+      {
+        "raw": "note-io.ts",
+        "lineNumber": 23,
+        "resolved": "src/core/note-io.ts.md"
+      },
+      {
+        "raw": "link-index.ts",
+        "lineNumber": 24,
+        "resolved": "src/core/link-index.ts.md"
+      },
+      {
+        "raw": "sync-engine.ts",
+        "lineNumber": 25,
+        "resolved": "src/core/sync-engine.ts.md"
+      },
+      {
+        "raw": "markdown.ts",
+        "lineNumber": 26,
+        "resolved": "src/util/markdown.ts.md"
+      },
+      {
+        "raw": "fs-helpers.ts",
+        "lineNumber": 27,
+        "resolved": "src/util/fs-helpers.ts.md"
+      },
+      {
+        "raw": "types.ts",
+        "lineNumber": 28,
+        "resolved": "src/types.ts.md"
+      }
+    ],
+    "src/types.ts.md": [
+      {
+        "raw": "roam-paths.ts",
+        "lineNumber": 22,
+        "resolved": "src/core/roam-paths.ts.md"
+      },
+      {
+        "raw": "link-index.ts",
+        "lineNumber": 23,
+        "resolved": "src/core/link-index.ts.md"
+      },
+      {
+        "raw": "sync-engine.ts",
+        "lineNumber": 24,
+        "resolved": "src/core/sync-engine.ts.md"
+      },
+      {
+        "raw": "index.ts",
+        "lineNumber": 25,
+        "resolved": "src/index.ts.md"
+      }
+    ],
+    "src/util/_dir.md": [
+      {
+        "raw": "src",
+        "lineNumber": 19,
+        "resolved": "src/_dir.md"
+      },
+      {
+        "raw": "src/core",
+        "lineNumber": 20,
+        "resolved": "src/core/_dir.md"
+      }
+    ],
+    "src/util/fs-helpers.ts.md": [
+      {
+        "raw": "roam-paths.ts",
+        "lineNumber": 25,
+        "resolved": "src/core/roam-paths.ts.md"
+      },
+      {
+        "raw": "scanner.ts",
+        "lineNumber": 26,
+        "resolved": "src/core/scanner.ts.md"
+      },
+      {
+        "raw": "note-io.ts",
+        "lineNumber": 27,
+        "resolved": "src/core/note-io.ts.md"
+      },
+      {
+        "raw": "link-index.ts",
+        "lineNumber": 28,
+        "resolved": "src/core/link-index.ts.md"
+      }
+    ],
+    "src/util/markdown.ts.md": [
+      {
+        "raw": "index.ts",
+        "lineNumber": 20,
+        "resolved": "src/index.ts.md"
+      },
+      {
+        "raw": "cli.ts",
+        "lineNumber": 21,
+        "resolved": "src/cli.ts.md"
+      }
+    ],
+    "src/util/pkg.ts.md": []
+  },
+  "backlinks": {
+    "src/_dir.md": [
+      {
+        "from": "_dir.md",
+        "lineNumber": 21,
+        "raw": "src"
+      },
+      {
+        "from": "src/core/_dir.md",
+        "lineNumber": 23,
+        "raw": "src"
+      },
+      {
+        "from": "src/util/_dir.md",
+        "lineNumber": 19,
+        "raw": "src"
+      }
+    ],
+    "commands/_dir.md": [
+      {
+        "from": "_dir.md",
+        "lineNumber": 22,
+        "raw": "commands"
+      },
+      {
+        "from": "commands/roam.md.md",
+        "lineNumber": 36,
+        "raw": "commands/_dir.md"
+      }
+    ],
+    "commands/roam.md.md": [
+      {
+        "from": "commands/_dir.md",
+        "lineNumber": 18,
+        "raw": "commands/roam.md"
+      }
+    ],
+    "_dir.md": [
+      {
+        "from": "commands/roam.md.md",
+        "lineNumber": 37,
+        "raw": "_dir.md"
+      }
+    ],
+    "src/core/_dir.md": [
+      {
+        "from": "src/_dir.md",
+        "lineNumber": 22,
+        "raw": "src/core"
+      },
+      {
+        "from": "src/util/_dir.md",
+        "lineNumber": 20,
+        "raw": "src/core"
+      }
+    ],
+    "src/util/_dir.md": [
+      {
+        "from": "src/_dir.md",
+        "lineNumber": 23,
+        "raw": "src/util"
+      },
+      {
+        "from": "src/core/_dir.md",
+        "lineNumber": 24,
+        "raw": "src/util"
+      }
+    ],
+    "src/index.ts.md": [
+      {
+        "from": "src/_dir.md",
+        "lineNumber": 24,
+        "raw": "index.ts"
+      },
+      {
+        "from": "src/cli.ts.md",
+        "lineNumber": 20,
+        "raw": "index.ts"
+      },
+      {
+        "from": "src/core/roam-paths.ts.md",
+        "lineNumber": 32,
+        "raw": "index.ts"
+      },
+      {
+        "from": "src/types.ts.md",
+        "lineNumber": 25,
+        "raw": "index.ts"
+      },
+      {
+        "from": "src/util/markdown.ts.md",
+        "lineNumber": 20,
+        "raw": "index.ts"
+      }
+    ],
+    "src/cli.ts.md": [
+      {
+        "from": "src/_dir.md",
+        "lineNumber": 25,
+        "raw": "cli.ts"
+      },
+      {
+        "from": "src/core/roam-paths.ts.md",
+        "lineNumber": 33,
+        "raw": "cli.ts"
+      },
+      {
+        "from": "src/index.ts.md",
+        "lineNumber": 20,
+        "raw": "cli.ts"
+      },
+      {
+        "from": "src/util/markdown.ts.md",
+        "lineNumber": 21,
+        "raw": "cli.ts"
+      }
+    ],
+    "src/types.ts.md": [
+      {
+        "from": "src/_dir.md",
+        "lineNumber": 26,
+        "raw": "types.ts"
+      },
+      {
+        "from": "src/core/link-index.ts.md",
+        "lineNumber": 27,
+        "raw": "types.ts"
+      },
+      {
+        "from": "src/core/roam-paths.ts.md",
+        "lineNumber": 27,
+        "raw": "types.ts"
+      },
+      {
+        "from": "src/core/sync-engine.ts.md",
+        "lineNumber": 24,
+        "raw": "types.ts"
+      },
+      {
+        "from": "src/index.ts.md",
+        "lineNumber": 28,
+        "raw": "types.ts"
+      }
+    ],
+    "src/core/roam-paths.ts.md": [
+      {
+        "from": "src/cli.ts.md",
+        "lineNumber": 21,
+        "raw": "roam-paths.ts"
+      },
+      {
+        "from": "src/core/link-index.ts.md",
+        "lineNumber": 25,
+        "raw": "roam-paths.ts"
+      },
+      {
+        "from": "src/core/link-parser.ts.md",
+        "lineNumber": 20,
+        "raw": "roam-paths.ts"
+      },
+      {
+        "from": "src/core/note-io.ts.md",
+        "lineNumber": 21,
+        "raw": "roam-paths.ts"
+      },
+      {
+        "from": "src/core/scanner.ts.md",
+        "lineNumber": 21,
+        "raw": "roam-paths.ts"
+      },
+      {
+        "from": "src/core/sync-engine.ts.md",
+        "lineNumber": 22,
+        "raw": "roam-paths.ts"
+      },
+      {
+        "from": "src/index.ts.md",
+        "lineNumber": 21,
+        "raw": "roam-paths.ts"
+      },
+      {
+        "from": "src/types.ts.md",
+        "lineNumber": 22,
+        "raw": "roam-paths.ts"
+      },
+      {
+        "from": "src/util/fs-helpers.ts.md",
+        "lineNumber": 25,
+        "raw": "roam-paths.ts"
+      }
+    ],
+    "src/core/scanner.ts.md": [
+      {
+        "from": "src/cli.ts.md",
+        "lineNumber": 22,
+        "raw": "scanner.ts"
+      },
+      {
+        "from": "src/core/link-index.ts.md",
+        "lineNumber": 22,
+        "raw": "scanner.ts"
+      },
+      {
+        "from": "src/core/roam-paths.ts.md",
+        "lineNumber": 28,
+        "raw": "scanner.ts"
+      },
+      {
+        "from": "src/core/sync-engine.ts.md",
+        "lineNumber": 20,
+        "raw": "scanner.ts"
+      },
+      {
+        "from": "src/index.ts.md",
+        "lineNumber": 22,
+        "raw": "scanner.ts"
+      },
+      {
+        "from": "src/util/fs-helpers.ts.md",
+        "lineNumber": 26,
+        "raw": "scanner.ts"
+      }
+    ],
+    "src/core/note-io.ts.md": [
+      {
+        "from": "src/cli.ts.md",
+        "lineNumber": 23,
+        "raw": "note-io.ts"
+      },
+      {
+        "from": "src/core/link-index.ts.md",
+        "lineNumber": 23,
+        "raw": "note-io.ts"
+      },
+      {
+        "from": "src/core/roam-paths.ts.md",
+        "lineNumber": 29,
+        "raw": "note-io.ts"
+      },
+      {
+        "from": "src/core/sync-engine.ts.md",
+        "lineNumber": 21,
+        "raw": "note-io.ts"
+      },
+      {
+        "from": "src/index.ts.md",
+        "lineNumber": 23,
+        "raw": "note-io.ts"
+      },
+      {
+        "from": "src/util/fs-helpers.ts.md",
+        "lineNumber": 27,
+        "raw": "note-io.ts"
+      }
+    ],
+    "src/core/link-index.ts.md": [
+      {
+        "from": "src/cli.ts.md",
+        "lineNumber": 24,
+        "raw": "link-index.ts"
+      },
+      {
+        "from": "src/core/link-parser.ts.md",
+        "lineNumber": 19,
+        "raw": "link-index.ts"
+      },
+      {
+        "from": "src/core/note-io.ts.md",
+        "lineNumber": 23,
+        "raw": "link-index.ts"
+      },
+      {
+        "from": "src/core/roam-paths.ts.md",
+        "lineNumber": 30,
+        "raw": "link-index.ts"
+      },
+      {
+        "from": "src/core/scanner.ts.md",
+        "lineNumber": 22,
+        "raw": "link-index.ts"
+      },
+      {
+        "from": "src/core/sync-engine.ts.md",
+        "lineNumber": 23,
+        "raw": "link-index.ts"
+      },
+      {
+        "from": "src/index.ts.md",
+        "lineNumber": 24,
+        "raw": "link-index.ts"
+      },
+      {
+        "from": "src/types.ts.md",
+        "lineNumber": 23,
+        "raw": "link-index.ts"
+      },
+      {
+        "from": "src/util/fs-helpers.ts.md",
+        "lineNumber": 28,
+        "raw": "link-index.ts"
+      }
+    ],
+    "src/core/sync-engine.ts.md": [
+      {
+        "from": "src/cli.ts.md",
+        "lineNumber": 25,
+        "raw": "sync-engine.ts"
+      },
+      {
+        "from": "src/core/note-io.ts.md",
+        "lineNumber": 24,
+        "raw": "sync-engine.ts"
+      },
+      {
+        "from": "src/core/roam-paths.ts.md",
+        "lineNumber": 31,
+        "raw": "sync-engine.ts"
+      },
+      {
+        "from": "src/core/scanner.ts.md",
+        "lineNumber": 23,
+        "raw": "sync-engine.ts"
+      },
+      {
+        "from": "src/index.ts.md",
+        "lineNumber": 25,
+        "raw": "sync-engine.ts"
+      },
+      {
+        "from": "src/types.ts.md",
+        "lineNumber": 24,
+        "raw": "sync-engine.ts"
+      }
+    ],
+    "src/util/markdown.ts.md": [
+      {
+        "from": "src/cli.ts.md",
+        "lineNumber": 26,
+        "raw": "markdown.ts"
+      },
+      {
+        "from": "src/index.ts.md",
+        "lineNumber": 26,
+        "raw": "markdown.ts"
+      }
+    ],
+    "src/util/fs-helpers.ts.md": [
+      {
+        "from": "src/cli.ts.md",
+        "lineNumber": 27,
+        "raw": "fs-helpers.ts"
+      },
+      {
+        "from": "src/core/link-index.ts.md",
+        "lineNumber": 26,
+        "raw": "fs-helpers.ts"
+      },
+      {
+        "from": "src/core/note-io.ts.md",
+        "lineNumber": 22,
+        "raw": "fs-helpers.ts"
+      },
+      {
+        "from": "src/core/scanner.ts.md",
+        "lineNumber": 20,
+        "raw": "fs-helpers.ts"
+      },
+      {
+        "from": "src/index.ts.md",
+        "lineNumber": 27,
+        "raw": "fs-helpers.ts"
+      }
+    ],
+    "src/core/link-parser.ts.md": [
+      {
+        "from": "src/core/link-index.ts.md",
+        "lineNumber": 24,
+        "raw": "link-parser.ts"
+      }
+    ]
+  },
   "forward": {
+    ".changes/_dir.md": [],
+    ".claude-plugin/_dir.md": [],
     "_dir.md": [
       "src/_dir.md",
       "commands/_dir.md"
     ],
+    "commands/_dir.md": [
+      "commands/roam.md.md"
+    ],
+    "commands/roam.md.md": [
+      "commands/_dir.md",
+      "_dir.md"
+    ],
+    "scripts/_dir.md": [],
+    "scripts/sync-version.mjs.md": [],
     "src/_dir.md": [
       "src/core/_dir.md",
       "src/util/_dir.md",
       "src/index.ts.md",
       "src/cli.ts.md",
-      "src/types.ts.md"
-    ],
-    "src/core/_dir.md": [
-      "src/_dir.md",
-      "src/util/_dir.md"
-    ],
-    "src/util/_dir.md": [
-      "src/_dir.md",
-      "src/core/_dir.md"
-    ],
-    "src/tools/_dir.md": [],
-    "src/index.ts.md": [
-      "src/cli.ts.md",
-      "src/core/roam-paths.ts.md",
-      "src/core/scanner.ts.md",
-      "src/core/note-io.ts.md",
-      "src/core/link-index.ts.md",
-      "src/core/sync-engine.ts.md",
-      "src/util/markdown.ts.md",
-      "src/util/fs-helpers.ts.md",
       "src/types.ts.md"
     ],
     "src/cli.ts.md": [
@@ -41,27 +855,9 @@
       "src/util/markdown.ts.md",
       "src/util/fs-helpers.ts.md"
     ],
-    "src/types.ts.md": [
-      "src/core/roam-paths.ts.md",
-      "src/core/link-index.ts.md",
-      "src/core/sync-engine.ts.md",
-      "src/index.ts.md"
-    ],
-    "src/core/scanner.ts.md": [
-      "src/util/fs-helpers.ts.md",
-      "src/core/roam-paths.ts.md",
-      "src/core/link-index.ts.md",
-      "src/core/sync-engine.ts.md"
-    ],
-    "src/core/note-io.ts.md": [
-      "src/core/roam-paths.ts.md",
-      "src/util/fs-helpers.ts.md",
-      "src/core/link-index.ts.md",
-      "src/core/sync-engine.ts.md"
-    ],
-    "src/core/link-parser.ts.md": [
-      "src/core/link-index.ts.md",
-      "src/core/roam-paths.ts.md"
+    "src/core/_dir.md": [
+      "src/_dir.md",
+      "src/util/_dir.md"
     ],
     "src/core/link-index.ts.md": [
       "src/core/scanner.ts.md",
@@ -71,12 +867,15 @@
       "src/util/fs-helpers.ts.md",
       "src/types.ts.md"
     ],
-    "src/core/sync-engine.ts.md": [
-      "src/core/scanner.ts.md",
-      "src/core/note-io.ts.md",
-      "src/core/roam-paths.ts.md",
+    "src/core/link-parser.ts.md": [
       "src/core/link-index.ts.md",
-      "src/types.ts.md"
+      "src/core/roam-paths.ts.md"
+    ],
+    "src/core/note-io.ts.md": [
+      "src/core/roam-paths.ts.md",
+      "src/util/fs-helpers.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md"
     ],
     "src/core/roam-paths.ts.md": [
       "src/types.ts.md",
@@ -86,6 +885,41 @@
       "src/core/sync-engine.ts.md",
       "src/index.ts.md",
       "src/cli.ts.md"
+    ],
+    "src/core/scanner.ts.md": [
+      "src/util/fs-helpers.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md"
+    ],
+    "src/core/search.ts.md": [],
+    "src/core/sync-engine.ts.md": [
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/core/link-index.ts.md",
+      "src/types.ts.md"
+    ],
+    "src/index.ts.md": [
+      "src/cli.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/util/markdown.ts.md",
+      "src/util/fs-helpers.ts.md",
+      "src/types.ts.md"
+    ],
+    "src/types.ts.md": [
+      "src/core/roam-paths.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/index.ts.md"
+    ],
+    "src/util/_dir.md": [
+      "src/_dir.md",
+      "src/core/_dir.md"
     ],
     "src/util/fs-helpers.ts.md": [
       "src/core/roam-paths.ts.md",
@@ -97,13 +931,7 @@
       "src/index.ts.md",
       "src/cli.ts.md"
     ],
-    "commands/_dir.md": [
-      "commands/roam.md.md"
-    ],
-    "commands/roam.md.md": [
-      "commands/_dir.md",
-      "_dir.md"
-    ]
+    "src/util/pkg.ts.md": []
   },
   "reverse": {
     "src/_dir.md": [
@@ -115,6 +943,12 @@
       "_dir.md",
       "commands/roam.md.md"
     ],
+    "commands/roam.md.md": [
+      "commands/_dir.md"
+    ],
+    "_dir.md": [
+      "commands/roam.md.md"
+    ],
     "src/core/_dir.md": [
       "src/_dir.md",
       "src/util/_dir.md"
@@ -126,89 +960,138 @@
     "src/index.ts.md": [
       "src/_dir.md",
       "src/cli.ts.md",
-      "src/types.ts.md",
       "src/core/roam-paths.ts.md",
+      "src/types.ts.md",
       "src/util/markdown.ts.md"
     ],
     "src/cli.ts.md": [
       "src/_dir.md",
-      "src/index.ts.md",
       "src/core/roam-paths.ts.md",
+      "src/index.ts.md",
       "src/util/markdown.ts.md"
     ],
     "src/types.ts.md": [
       "src/_dir.md",
-      "src/index.ts.md",
-      "src/core/roam-paths.ts.md",
       "src/core/link-index.ts.md",
-      "src/core/sync-engine.ts.md"
+      "src/core/roam-paths.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/index.ts.md"
     ],
     "src/core/roam-paths.ts.md": [
-      "src/index.ts.md",
       "src/cli.ts.md",
-      "src/types.ts.md",
-      "src/core/scanner.ts.md",
-      "src/core/note-io.ts.md",
-      "src/core/link-parser.ts.md",
       "src/core/link-index.ts.md",
+      "src/core/link-parser.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/scanner.ts.md",
       "src/core/sync-engine.ts.md",
+      "src/index.ts.md",
+      "src/types.ts.md",
       "src/util/fs-helpers.ts.md"
     ],
     "src/core/scanner.ts.md": [
-      "src/index.ts.md",
       "src/cli.ts.md",
       "src/core/link-index.ts.md",
-      "src/core/sync-engine.ts.md",
       "src/core/roam-paths.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/index.ts.md",
       "src/util/fs-helpers.ts.md"
     ],
     "src/core/note-io.ts.md": [
-      "src/index.ts.md",
       "src/cli.ts.md",
       "src/core/link-index.ts.md",
-      "src/core/sync-engine.ts.md",
       "src/core/roam-paths.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/index.ts.md",
       "src/util/fs-helpers.ts.md"
     ],
     "src/core/link-index.ts.md": [
-      "src/index.ts.md",
       "src/cli.ts.md",
-      "src/types.ts.md",
-      "src/core/scanner.ts.md",
-      "src/core/note-io.ts.md",
       "src/core/link-parser.ts.md",
-      "src/core/sync-engine.ts.md",
+      "src/core/note-io.ts.md",
       "src/core/roam-paths.ts.md",
+      "src/core/scanner.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/index.ts.md",
+      "src/types.ts.md",
       "src/util/fs-helpers.ts.md"
     ],
     "src/core/sync-engine.ts.md": [
-      "src/index.ts.md",
       "src/cli.ts.md",
-      "src/types.ts.md",
-      "src/core/scanner.ts.md",
       "src/core/note-io.ts.md",
-      "src/core/link-index.ts.md",
-      "src/core/roam-paths.ts.md"
+      "src/core/roam-paths.ts.md",
+      "src/core/scanner.ts.md",
+      "src/index.ts.md",
+      "src/types.ts.md"
     ],
     "src/util/markdown.ts.md": [
-      "src/index.ts.md",
-      "src/cli.ts.md"
+      "src/cli.ts.md",
+      "src/index.ts.md"
     ],
     "src/util/fs-helpers.ts.md": [
-      "src/index.ts.md",
       "src/cli.ts.md",
-      "src/core/scanner.ts.md",
+      "src/core/link-index.ts.md",
       "src/core/note-io.ts.md",
-      "src/core/link-index.ts.md"
+      "src/core/scanner.ts.md",
+      "src/index.ts.md"
     ],
     "src/core/link-parser.ts.md": [
       "src/core/link-index.ts.md"
+    ]
+  },
+  "dangling": {
+    "wiki-style links": [
+      {
+        "from": "_dir.md",
+        "lineNumber": 5,
+        "raw": "wiki-style links"
+      }
     ],
-    "commands/roam.md.md": [
-      "commands/_dir.md"
+    "link": [
+      {
+        "from": "src/core/_dir.md",
+        "lineNumber": 11,
+        "raw": "link"
+      },
+      {
+        "from": "src/core/roam-paths.ts.md",
+        "lineNumber": 5,
+        "raw": "link"
+      }
     ],
-    "_dir.md": [
-      "commands/roam.md.md"
+    "wiki link": [
+      {
+        "from": "src/core/link-parser.ts.md",
+        "lineNumber": 5,
+        "raw": "wiki link"
+      }
+    ],
+    "b": [
+      {
+        "from": "src/core/link-parser.ts.md",
+        "lineNumber": 5,
+        "raw": "b"
+      }
+    ],
+    "oldTarget": [
+      {
+        "from": "src/core/link-parser.ts.md",
+        "lineNumber": 10,
+        "raw": "oldTarget"
+      }
+    ],
+    "filename.ts": [
+      {
+        "from": "src/core/roam-paths.ts.md",
+        "lineNumber": 22,
+        "raw": "filename.ts"
+      }
+    ],
+    "filename": [
+      {
+        "from": "src/core/roam-paths.ts.md",
+        "lineNumber": 22,
+        "raw": "filename"
+      }
     ]
   }
 }

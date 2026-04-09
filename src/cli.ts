@@ -1,20 +1,77 @@
 import { resolve } from "node:path";
 import { pkg } from "./util/pkg.js";
-import { makeConfig, projectPathToNotePath, dirToNotePath, shouldMirror } from "./core/roam-paths.js";
+import { makeConfig, projectPathToNotePath, dirToNotePath, shouldMirror, resolveLinkDetailed, notePathToProjectPath, isDirNote, isStandaloneNote } from "./core/roam-paths.js";
 import { scanProjectStructure, scanExistingNotes } from "./core/scanner.js";
 import { readNote, writeNote, noteExists } from "./core/note-io.js";
 import { getOrBuildIndex, buildIndex, saveIndex, invalidateIndex } from "./core/link-index.js";
+import { searchNotes } from "./core/search.js";
 import { sync } from "./core/sync-engine.js";
-import { dirNoteTemplate } from "./util/markdown.js";
 import { ensureDir } from "./util/fs-helpers.js";
 
 const log = (obj: unknown) => console.log(JSON.stringify(obj, null, 2));
 
-const resolveRoot = (dir?: string) => resolve(dir ?? process.cwd());
+// ── flag parser ───────────────────────────────────────────────────────
 
-const commands: Record<string, (args: string[]) => Promise<void>> = {
+type ParsedArgs = {
+  readonly positional: readonly string[];
+  readonly flags: Readonly<Record<string, string | boolean>>;
+};
+
+const parseArgs = (
+  argv: readonly string[],
+  booleanFlags: ReadonlySet<string> = new Set()
+): ParsedArgs => {
+  const positional: string[] = [];
+  const flags: Record<string, string | boolean> = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]!;
+    if (!a.startsWith("-")) { positional.push(a); continue; }
+    const body = a.replace(/^--?/, "");
+    const eq = body.indexOf("=");
+    if (eq !== -1) { flags[body.slice(0, eq)] = body.slice(eq + 1); continue; }
+    if (booleanFlags.has(body)) { flags[body] = true; continue; }
+    const next = argv[i + 1];
+    if (next !== undefined && !next.startsWith("-")) { flags[body] = next; i++; continue; }
+    flags[body] = true;
+  }
+  return { positional, flags };
+};
+
+const numFlag = (flags: ParsedArgs["flags"], key: string): number | undefined => {
+  const v = flags[key];
+  return typeof v === "string" ? Number(v) : undefined;
+};
+
+const strFlag = (flags: ParsedArgs["flags"], key: string): string | undefined => {
+  const v = flags[key];
+  return typeof v === "string" ? v : undefined;
+};
+
+const boolFlag = (flags: ParsedArgs["flags"], key: string): boolean =>
+  flags[key] === true;
+
+const rootFromFlags = (flags: ParsedArgs["flags"]): string =>
+  resolve(strFlag(flags, "root") ?? process.cwd());
+
+/** Sentinel for empty notes — tells the LLM where to look instead of returning ''. */
+const emptyNoteHint = (notePath: string): string => {
+  if (isStandaloneNote(notePath)) return `(empty standalone note: ${notePath})`;
+  if (isDirNote(notePath)) {
+    const dir = notePath.replace(/\/?_dir\.md$/, "") || ".";
+    return `(empty dir note — list directory: ${dir})`;
+  }
+  const projectPath = notePathToProjectPath(notePath);
+  return projectPath
+    ? `(empty note — read source file: ${projectPath})`
+    : `(empty note: ${notePath})`;
+};
+
+// ── commands ──────────────────────────────────────────────────────────
+
+const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
   async init(args) {
-    const root = resolveRoot(args[0]);
+    const { flags } = parseArgs(args);
+    const root = rootFromFlags(flags);
     const config = makeConfig(root);
     await ensureDir(config.roamDir);
     await ensureDir(config.notesDir);
@@ -25,12 +82,12 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
     for (const dir of dirs) {
       const notePath = dirToNotePath(dir);
       if (!(await noteExists(config, notePath))) {
-        await writeNote(config, notePath, dirNoteTemplate(dir));
+        await writeNote(config, notePath, "");
         created++;
       }
     }
     if (!(await noteExists(config, "_dir.md"))) {
-      await writeNote(config, "_dir.md", dirNoteTemplate(root.split("/").pop() ?? "project"));
+      await writeNote(config, "_dir.md", "");
       created++;
     }
     for (const file of files) {
@@ -48,62 +105,138 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
   },
 
   async list(args) {
-    const config = makeConfig(resolveRoot(args[0]));
+    const { flags } = parseArgs(args);
+    const config = makeConfig(rootFromFlags(flags));
     const notes = await scanExistingNotes(config);
     log({ total: notes.length, notes });
   },
 
   async read(args) {
-    const [notePath, dir] = args;
-    if (!notePath) { console.error("Usage: roammem read <notePath> [projectRoot]"); process.exit(1); }
-    const config = makeConfig(resolveRoot(dir));
-    const content = await readNote(config, notePath);
-    if (content === null) { console.error(`Note not found: ${notePath}`); process.exit(1); }
-    console.log(content);
+    const { positional, flags } = parseArgs(args);
+    if (positional.length === 0) {
+      console.error("Usage: roammem read <notePath> [<notePath>...] [--from N] [--to M] [--lines N:M] [--root D]");
+      process.exit(1);
+    }
+    const config = makeConfig(rootFromFlags(flags));
+
+    let from = numFlag(flags, "from");
+    let to = numFlag(flags, "to");
+    const lines = strFlag(flags, "lines");
+    if (lines) {
+      const [a, b] = lines.split(":").map(Number);
+      from = Number.isFinite(a) ? a : undefined;
+      to = Number.isFinite(b) ? b : undefined;
+    }
+
+    const slice = (text: string, path: string): string => {
+      if (text.length === 0) return emptyNoteHint(path);
+      if (from === undefined && to === undefined) return text;
+      const all = text.split("\n");
+      const lo = Math.max(1, from ?? 1);
+      const hi = Math.min(all.length, to ?? all.length);
+      return `# lines ${lo}-${hi} of total ${all.length} in ${path}\n${all.slice(lo - 1, hi).join("\n")}`;
+    };
+
+    const notes = await scanExistingNotes(config);
+    for (const requested of positional) {
+      let content = await readNote(config, requested);
+      let actual = requested;
+      if (content === null) {
+        const detail = resolveLinkDetailed(requested, notes);
+        if (detail.resolved) {
+          actual = detail.resolved;
+          content = await readNote(config, actual);
+          console.error(`# did you mean: ${actual} (matched via ${detail.strategy})`);
+        } else if (detail.candidates.length > 0) {
+          console.error(`Note not found: ${requested}\nDid you mean one of:\n${detail.candidates.map((c) => `  ${c}`).join("\n")}`);
+          process.exit(1);
+        } else {
+          console.error(`Note not found: ${requested}`);
+          process.exit(1);
+        }
+      }
+      if (positional.length > 1) console.log(`\n===== ${actual} =====`);
+      console.log(slice(content!, actual));
+    }
   },
 
   async write(args) {
-    const [notePath, contentArg, dir] = args;
-    if (!notePath || contentArg === undefined) { console.error("Usage: roammem write <notePath> <content> [projectRoot]"); process.exit(1); }
-    const config = makeConfig(resolveRoot(dir));
+    const { positional, flags } = parseArgs(args);
+    const [notePath, contentArg] = positional;
+    if (!notePath || contentArg === undefined) {
+      console.error("Usage: roammem write <notePath> <content> [--root D]");
+      process.exit(1);
+    }
+    const config = makeConfig(rootFromFlags(flags));
     await writeNote(config, notePath, contentArg);
     await invalidateIndex(config);
     console.log(`Note written: ${notePath}`);
   },
 
   async links(args) {
-    const [notePath, dir] = args;
-    if (!notePath) { console.error("Usage: roammem links <notePath> [projectRoot]"); process.exit(1); }
-    const config = makeConfig(resolveRoot(dir));
+    const { positional, flags } = parseArgs(args, new Set(["detail"]));
+    const [notePath] = positional;
+    if (!notePath) {
+      console.error("Usage: roammem links <notePath> [--detail] [--root D]");
+      process.exit(1);
+    }
+    const config = makeConfig(rootFromFlags(flags));
     const index = await getOrBuildIndex(config);
-    log({
-      notePath,
-      forward: index.forward[notePath] ?? [],
-      backlinks: index.reverse[notePath] ?? [],
-    });
+    const detail = boolFlag(flags, "detail");
+    log(detail
+      ? {
+          notePath,
+          forward: index.forward[notePath] ?? [],
+          backlinks: index.reverse[notePath] ?? [],
+          forwardDetails: index.links[notePath] ?? [],
+          backlinkDetails: index.backlinks[notePath] ?? [],
+        }
+      : {
+          notePath,
+          forward: index.forward[notePath] ?? [],
+          backlinks: index.reverse[notePath] ?? [],
+        });
   },
 
   async search(args) {
-    const [query, dir] = args;
-    if (!query) { console.error("Usage: roammem search <query> [projectRoot]"); process.exit(1); }
-    const config = makeConfig(resolveRoot(dir));
-    const notes = await scanExistingNotes(config);
-    const hits: { notePath: string; lineNumber: number; line: string }[] = [];
-    for (const notePath of notes) {
-      const content = await readNote(config, notePath);
-      if (!content) continue;
-      content.split("\n").forEach((line, i) => {
-        if (line.toLowerCase().includes(query.toLowerCase())) {
-          hits.push({ notePath, lineNumber: i + 1, line });
-        }
-      });
+    const { positional, flags } = parseArgs(args, new Set(["regex"]));
+    const [query] = positional;
+    if (!query) {
+      console.error("Usage: roammem search <query> [--regex] [--max N] [--context N] [--root D]");
+      process.exit(1);
     }
-    log({ query, totalHits: hits.length, hits: hits.slice(0, 20) });
+    const config = makeConfig(rootFromFlags(flags));
+    const hits = await searchNotes(config, query, {
+      regex: boolFlag(flags, "regex"),
+      maxResults: numFlag(flags, "max"),
+      contextLines: numFlag(flags, "context"),
+    });
+    log({ query, totalHits: hits.length, hits });
+  },
+
+  async resolve(args) {
+    const { positional, flags } = parseArgs(args);
+    const [target] = positional;
+    if (!target) {
+      console.error("Usage: roammem resolve <target> [--root D]");
+      process.exit(1);
+    }
+    const config = makeConfig(rootFromFlags(flags));
+    const notes = await scanExistingNotes(config);
+    log(resolveLinkDetailed(target, notes));
+  },
+
+  async dangling(args) {
+    const { flags } = parseArgs(args);
+    const config = makeConfig(rootFromFlags(flags));
+    const index = await getOrBuildIndex(config);
+    log({ total: Object.keys(index.dangling).length, dangling: index.dangling });
   },
 
   async sync(args) {
-    const config = makeConfig(resolveRoot(args[0]));
-    const result = await sync(config);
+    const { flags } = parseArgs(args);
+    const config = makeConfig(rootFromFlags(flags));
+    const result = await sync(config, boolFlag(flags, "dry-run"));
     log(result);
   },
 };
@@ -114,17 +247,23 @@ Usage: roammem <command> [args]
        roammem [--help|-h] [--version|-v]
 
 Commands:
-  init   [projectRoot]                  Initialize .roam/ from project structure
-  list   [projectRoot]                  List all notes
-  read   <notePath> [projectRoot]       Read a note
-  write  <notePath> <content> [root]    Write a note
-  links  <notePath> [projectRoot]       Query forward links and backlinks
-  search <query> [projectRoot]          Full-text search across notes
-  sync   [projectRoot]                  Detect file changes, mark orphans
+  init     [--root D]                          Initialize .roam/ from project structure
+  list     [--root D]                          List all notes
+  read     <notePath> [<notePath>...] [opts]   Read one or more notes (fuzzy fallback on miss)
+             [--from N] [--to M] [--lines N:M] [--root D]
+  write    <notePath> <content> [--root D]     Write a note
+  links    <notePath> [--detail] [--root D]    Forward links + backlinks (--detail adds line numbers)
+  search   <query> [--regex] [--max N]         Full-text search (hits include resolved [[links]])
+             [--context N] [--root D]
+  resolve  <target> [--root D]                 Resolve a [[target]] to a note path
+  dangling [--root D]                          List all unresolved [[links]] across the project
+  sync     [--dry-run] [--root D]              Detect file changes, mark orphans, rebuild index
 
-No command → start MCP server (stdio transport)`;
+No command → start MCP server (stdio transport)
 
-export const runCli = async (args: string[]): Promise<boolean> => {
+Note: --root defaults to the current working directory.`;
+
+export const runCli = async (args: readonly string[]): Promise<boolean> => {
   const cmd = args[0];
   if (!cmd) return false; // no args → MCP mode
 
