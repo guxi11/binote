@@ -1,0 +1,27 @@
+{
+  "name": "roammem",
+  "owner": {
+    "name": "Guxi11"
+  },
+  "metadata": {
+    "description": "Bidirectional-linked project memory for AI with [[wiki-style links]]"
+  },
+  "plugins": [
+    {
+      "name": "roammem",
+      "source": {
+        "source": "npm",
+        "package": "roammem"
+      },
+      "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .roam/ with [[wiki-style links]]",
+      "version": "0.1.0",
+      "category": "developer-tools",
+      "tags": ["mcp", "memory", "knowledge-graph", "bidirectional-links"],
+      "mcpServers": {
+        "roammem": {
+          "command": "roammem"
+        }
+      }
+    }
+  ]
+}

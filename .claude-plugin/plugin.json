@@ -1,0 +1,17 @@
+{
+  "name": "roammem",
+  "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .roam/ with [[wiki-style links]]",
+  "version": "0.1.0",
+  "author": {
+    "name": "Guxi11"
+  },
+  "homepage": "https://github.com/Guxi11/roammem",
+  "repository": "https://github.com/Guxi11/roammem",
+  "license": "MIT",
+  "keywords": ["mcp", "memory", "bidirectional-links", "knowledge-graph", "ai"],
+  "mcpServers": {
+    "roammem": {
+      "command": "roammem"
+    }
+  }
+}
