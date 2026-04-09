@@ -2,7 +2,7 @@
 description: "Activate roam-first mode: read .roam/ notes before source code. Auto-loads roam context when user references file paths. Use at conversation start. Triggers on: '/roam'."
 ---
 
-# RoamMem — Roam-First Mode
+# roamem — Roam-First Mode
 
 From this point forward in the conversation, follow these rules:
 

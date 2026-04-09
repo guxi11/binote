@@ -2,7 +2,7 @@
 description: "Save current session's learnings into .roam/ notes. Captures design decisions, discoveries, and context from this conversation. Triggers on: '/roam-save', 'save to roam', 'save session notes'."
 ---
 
-# RoamMem Session Save
+# roamem Session Save
 
 You are distilling this conversation's learnings into `.roam/` notes — design decisions made, bugs found, architectural discoveries, non-obvious behaviors uncovered.
 
@@ -36,5 +36,5 @@ You are distilling this conversation's learnings into `.roam/` notes — design 
    - Preserve existing content — append, don't overwrite
    - Add `[[links]]` to related files discovered during the session
 4. If a discovery spans multiple files or is architectural, write a standalone note to `.roam/_notes/<topic>.md`
-5. After all writes, call the `rebuild_index` MCP tool to refresh `_index.json` (do NOT manually rebuild the json — use the tool)
+5. After all writes, call the `rebuild` MCP tool to refresh `_index.json` (do NOT manually rebuild the json — use the tool)
 6. Report what was saved: which notes updated, which created, key insights captured

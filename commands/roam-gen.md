@@ -3,7 +3,7 @@ description: "Generate roam note content by reading source files. Fills empty .r
 argument-hint: "[path/to/file, directory, or 'all']"
 ---
 
-# RoamMem Note Generator
+# roamem Note Generator
 
 You are generating meaningful content for `.roam/` notes by reading the actual source code and filling in summaries, purpose descriptions, and `[[bidirectional links]]`.
 
@@ -70,7 +70,7 @@ Architectural decisions, conventions within this directory.
 2. Identify empty or skeleton-only notes (< 50 chars or only headings)
 3. For each empty note, read the corresponding source file
 4. Generate and write note content
-5. After all notes are written, call the `rebuild_index` MCP tool to refresh `_index.json` (do NOT manually read notes or write the json yourself — that wastes tokens)
+5. After all notes are written, call the `rebuild` MCP tool to refresh `_index.json` (do NOT manually read notes or write the json yourself — that wastes tokens)
 
 ## Rules
 

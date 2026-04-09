@@ -1,10 +1,10 @@
-# RoamMem
+# roamem
 
 Bidirectional-linked project memory for AI. Mirrors your codebase into `.roam/` with `[[wiki-style links]]`, giving AI agents structured context about your project's architecture, design decisions, and file relationships.
 
 ## Why
 
-AI tools read code but lack project context — why a file exists, how modules relate, what design tradeoffs were made. RoamMem fills this gap with a local knowledge graph that lives alongside your code.
+AI tools read code but lack project context — why a file exists, how modules relate, what design tradeoffs were made. roamem fills this gap with a local knowledge graph that lives alongside your code.
 
 ## How it works
 
@@ -40,7 +40,7 @@ Query links to traverse the graph in both directions.
 ## Install
 
 ```bash
-npm install -g roammem
+npm install -g roamem
 ```
 
 ## Setup
@@ -48,8 +48,8 @@ npm install -g roammem
 ### Claude Plugin (recommended)
 
 ```bash
-/plugin marketplace add Guxi11/roammem
-/plugin install roammem@roammem
+/plugin marketplace add Guxi11/roamem
+/plugin install roamem@roamem
 ```
 
 This gives you both MCP tools and slash commands.
@@ -57,7 +57,7 @@ This gives you both MCP tools and slash commands.
 ### Claude MCP only
 
 ```bash
-claude mcp add roammem -- roammem
+claude mcp add roamem -- roamem
 ```
 
 MCP tools only — no slash commands.
@@ -65,7 +65,7 @@ MCP tools only — no slash commands.
 ### Local dev
 
 ```bash
-claude --plugin-dir /path/to/roammem
+claude --plugin-dir /path/to/roamem
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup.
@@ -77,8 +77,8 @@ Add to your MCP config (`.mcp.json`, `claude_desktop_config.json`, etc.):
 ```json
 {
   "mcpServers": {
-    "roammem": {
-      "command": "roammem"
+    "mem": {
+      "command": "roamem"
     }
   }
 }
@@ -100,23 +100,25 @@ Slash commands require plugin install. See Setup above.
 | Tool | Description |
 |------|-------------|
 | `init` | Scan project and generate `.roam/` skeleton |
-| `read_note` | Read a note by path |
-| `write_note` | Create or update a note with `[[links]]` |
-| `query_links` | Get forward links and backlinks for a note |
+| `read` | Read a note by path |
+| `write` | Create or update a note with `[[links]]` |
+| `links` | Get forward links and backlinks for a note |
 | `search` | Full-text search across all notes |
+| `resolve` | Resolve a `[[target]]` to a concrete note path |
 | `sync` | Detect file renames/deletes, mark orphaned notes |
-| `list_notes` | List all notes in `.roam/` |
+| `rebuild` | Rebuild link index from all notes |
+| `list` | List all notes in `.roam/` |
 
 ## CLI
 
 ```bash
-roammem init   [projectRoot]                  # Initialize .roam/
-roammem list   [projectRoot]                  # List all notes
-roammem read   <notePath> [projectRoot]       # Read a note
-roammem write  <notePath> <content> [root]    # Write a note
-roammem links  <notePath> [projectRoot]       # Query forward/backlinks
-roammem search <query> [projectRoot]          # Full-text search
-roammem sync   [projectRoot]                  # Detect changes, mark orphans
+roamem init   [projectRoot]                  # Initialize .roam/
+roamem list   [projectRoot]                  # List all notes
+roamem read   <notePath> [projectRoot]       # Read a note
+roamem write  <notePath> <content> [root]    # Write a note
+roamem links  <notePath> [projectRoot]       # Query forward/backlinks
+roamem search <query> [projectRoot]          # Full-text search
+roamem sync   [projectRoot]                  # Detect changes, mark orphans
 ```
 
 No arguments starts the MCP server (stdio transport).

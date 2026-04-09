@@ -1,10 +1,10 @@
 {
-  "name": "roammem",
+  "name": "roamem",
   "version": "0.1.4",
   "description": "Bidirectional-linked project memory system for AI, exposed as MCP server",
   "type": "module",
   "bin": {
-    "roammem": "dist/index.js"
+    "roamem": "dist/index.js"
   },
   "files": [
     "dist",
@@ -42,6 +42,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/guxi11/roammem.git"
+    "url": "https://github.com/guxi11/roamem.git"
   }
 }

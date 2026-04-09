@@ -114,7 +114,7 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
   async read(args) {
     const { positional, flags } = parseArgs(args);
     if (positional.length === 0) {
-      console.error("Usage: roammem read <notePath> [<notePath>...] [--from N] [--to M] [--lines N:M] [--root D]");
+      console.error("Usage: roamem read <notePath> [<notePath>...] [--from N] [--to M] [--lines N:M] [--root D]");
       process.exit(1);
     }
     const config = makeConfig(rootFromFlags(flags));
@@ -164,7 +164,7 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
     const { positional, flags } = parseArgs(args);
     const [notePath, contentArg] = positional;
     if (!notePath || contentArg === undefined) {
-      console.error("Usage: roammem write <notePath> <content> [--root D]");
+      console.error("Usage: roamem write <notePath> <content> [--root D]");
       process.exit(1);
     }
     const config = makeConfig(rootFromFlags(flags));
@@ -177,7 +177,7 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
     const { positional, flags } = parseArgs(args, new Set(["detail"]));
     const [notePath] = positional;
     if (!notePath) {
-      console.error("Usage: roammem links <notePath> [--detail] [--root D]");
+      console.error("Usage: roamem links <notePath> [--detail] [--root D]");
       process.exit(1);
     }
     const config = makeConfig(rootFromFlags(flags));
@@ -202,7 +202,7 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
     const { positional, flags } = parseArgs(args, new Set(["regex"]));
     const [query] = positional;
     if (!query) {
-      console.error("Usage: roammem search <query> [--regex] [--max N] [--context N] [--root D]");
+      console.error("Usage: roamem search <query> [--regex] [--max N] [--context N] [--root D]");
       process.exit(1);
     }
     const config = makeConfig(rootFromFlags(flags));
@@ -218,7 +218,7 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
     const { positional, flags } = parseArgs(args);
     const [target] = positional;
     if (!target) {
-      console.error("Usage: roammem resolve <target> [--root D]");
+      console.error("Usage: roamem resolve <target> [--root D]");
       process.exit(1);
     }
     const config = makeConfig(rootFromFlags(flags));
@@ -241,10 +241,10 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
   },
 };
 
-const USAGE = `roammem v${pkg.version} — ${pkg.description}
+const USAGE = `roamem v${pkg.version} — ${pkg.description}
 
-Usage: roammem <command> [args]
-       roammem [--help|-h] [--version|-v]
+Usage: roamem <command> [args]
+       roamem [--help|-h] [--version|-v]
 
 Commands:
   init     [--root D]                          Initialize .roam/ from project structure

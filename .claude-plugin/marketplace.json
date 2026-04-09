@@ -1,5 +1,5 @@
 {
-  "name": "roammem",
+  "name": "roamem",
   "owner": {
     "name": "Guxi11"
   },
@@ -8,10 +8,10 @@
   },
   "plugins": [
     {
-      "name": "roammem",
+      "name": "roamem",
       "source": {
         "source": "npm",
-        "package": "roammem"
+        "package": "roamem"
       },
       "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .roam/ with [[wiki-style links]]",
       "version": "0.1.4",
@@ -23,8 +23,8 @@
         "bidirectional-links"
       ],
       "mcpServers": {
-        "roammem": {
-          "command": "roammem"
+        "mem": {
+          "command": "roamem"
         }
       }
     }

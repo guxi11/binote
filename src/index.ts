@@ -106,9 +106,9 @@ const renderNote = (text: string, path: string, from?: number, to?: number): str
   text.length === 0 ? emptyNoteHint(path) : sliceWindow(text, path, from, to);
 
 server.registerTool(
-  "read_note",
+  "read",
   {
-    description: "Read one or more RoamMem notes. Path is relative to .roam/ (e.g. 'src/index.ts.md'). Use notePaths for batch reads, from/to for line ranges.",
+    description: "Read one or more roamem notes. Path is relative to .roam/ (e.g. 'src/index.ts.md'). Use notePaths for batch reads, from/to for line ranges.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       notePath: z.string().optional().describe("Single note path; ignored if notePaths is provided"),
@@ -144,9 +144,9 @@ server.registerTool(
 // ── write_note ────────────────────────────────────────────────────────
 
 server.registerTool(
-  "write_note",
+  "write",
   {
-    description: "Create or update a RoamMem note. Use [[filename]] or [[path/to/file]] for bidirectional links.",
+    description: "Create or update a roamem note. Use [[filename]] or [[path/to/file]] for bidirectional links.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       notePath: z.string().describe("Path relative to .roam/. Use '_notes/my-note.md' for standalone notes."),
@@ -173,7 +173,7 @@ server.registerTool(
 // ── query_links ───────────────────────────────────────────────────────
 
 server.registerTool(
-  "query_links",
+  "links",
   {
     description: "Get forward links and backlinks for a note. Returns flat lists plus detailed line-aware variants and any dangling [[X]] from this note.",
     inputSchema: {
@@ -212,7 +212,7 @@ server.registerTool(
 server.registerTool(
   "search",
   {
-    description: "Full-text search across all RoamMem notes. Hits include resolved [[link]] targets on the matched line — use those instead of a follow-up query_links.",
+    description: "Full-text search across all roamem notes. Hits include resolved [[link]] targets on the matched line — use those instead of a follow-up links call.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       query: z.string().describe("Search query (plain text or regex)"),
@@ -239,7 +239,7 @@ server.registerTool(
 // ── resolve_link ──────────────────────────────────────────────────────
 
 server.registerTool(
-  "resolve_link",
+  "resolve",
   {
     description: "Resolve a [[target]] string to a concrete note path. Returns candidates if ambiguous. Falls back to substring matching for typos. Use before chasing a link whose destination isn't obvious.",
     inputSchema: {
@@ -296,7 +296,7 @@ server.registerTool(
 // ── rebuild_index ─────────────────────────────────────────────────────
 
 server.registerTool(
-  "rebuild_index",
+  "rebuild",
   {
     description: "Rebuild _index.json from all notes by extracting [[links]]. Use after bulk note writes to refresh forward/backlink graph without LLM token cost.",
     inputSchema: {
@@ -332,7 +332,7 @@ server.registerTool(
 // ── list_notes ────────────────────────────────────────────────────────
 
 server.registerTool(
-  "list_notes",
+  "list",
   {
     description: "List all existing notes in .roam/ directory.",
     inputSchema: {

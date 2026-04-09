@@ -3,8 +3,8 @@
 ## Setup
 
 ```bash
-git clone https://github.com/Guxi11/roammem.git
-cd roammem
+git clone https://github.com/Guxi11/roamem.git
+cd roamem
 npm install
 npm run build
 ```
@@ -49,7 +49,7 @@ commands/               # Claude Code slash commands (plugin skills)
 
 Two layers:
 
-1. **MCP server** (`src/index.ts`) — exposes tools (`init`, `read_note`, `write_note`, `query_links`, `search`, `sync`, `list_notes`) over stdio. Any MCP client can use these.
+1. **MCP server** (`src/index.ts`) — exposes tools (`init`, `read`, `write`, `links`, `search`, `resolve`, `sync`, `rebuild`, `list`) over stdio. Any MCP client can use these.
 
 2. **Slash commands** (`commands/*.md`) — prompt-based skills for Claude Code. These orchestrate the MCP tools with behavioral rules (e.g. "read roam notes before source files").
 
