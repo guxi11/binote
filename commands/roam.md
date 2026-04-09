@@ -21,13 +21,17 @@ If the roam note is empty or skeleton-only, read the source file directly and me
 
 ## On Activation
 
-Right now, do this:
+Right now, do this — and **only** this. Do not glob, do not read any other files:
 
 1. Read `.roam/_dir.md` (project root overview)
 2. Read `.roam/_index.json` (link graph)
-3. Glob `.roam/**/_dir.md` and read each directory overview
-4. Summarize what you learned — concise, no raw dumps
-5. Confirm roam-first mode is active
+3. Report status in **one line**:
+   - If `_dir.md` is a skeleton (empty sections) or `_index.json` is nearly empty → say "roam-first mode active · notes not initialized, run `/roam-gen` to populate"
+   - Otherwise → say "roam-first mode active · N nodes in graph" plus one short sentence on what the project is about
+
+No raw dumps. No file-by-file summaries. No reading directory `_dir.md` files upfront — those load on-demand.
+
+Directory and file notes are loaded **on-demand** when the user references them — not upfront.
 
 ## Reference
 

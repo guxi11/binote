@@ -4,7 +4,13 @@
     "src/_dir.md": [],
     "src/core/_dir.md": [],
     "src/tools/_dir.md": [],
-    "src/util/_dir.md": []
+    "src/util/_dir.md": [],
+    "commands/_dir.md": ["commands/roam.md.md"],
+    "commands/roam.md.md": ["commands/_dir.md", "_dir.md"]
   },
-  "reverse": {}
+  "reverse": {
+    "commands/roam.md.md": ["commands/_dir.md"],
+    "commands/_dir.md": ["commands/roam.md.md"],
+    "_dir.md": ["commands/roam.md.md"]
+  }
 }
