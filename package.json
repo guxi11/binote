@@ -16,7 +16,10 @@
     "prepare": "npm run build",
     "watch": "tsc --watch",
     "sync-version": "node scripts/sync-version.mjs",
-    "version": "npm run sync-version && git add .claude-plugin",
+    "change": "changenotes add",
+    "changes": "changenotes list",
+    "changes:preview": "changenotes preview",
+    "version": "npm run sync-version && changenotes release $npm_package_version && git add .claude-plugin CHANGELOG.md .changes",
     "release": "npm version patch && git push --follow-tags && npm publish"
   },
   "dependencies": {
@@ -26,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "changenotes": "^0.1.1",
     "typescript": "^5.6.0"
   },
   "keywords": [

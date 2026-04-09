@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { pkg } from "./util/pkg.js";
 import { makeConfig, projectPathToNotePath, dirToNotePath, shouldMirror } from "./core/roam-paths.js";
 import { scanProjectStructure, scanExistingNotes } from "./core/scanner.js";
 import { readNote, writeNote, noteExists } from "./core/note-io.js";
@@ -107,7 +108,10 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
   },
 };
 
-const USAGE = `Usage: roammem <command> [args]
+const USAGE = `roammem v${pkg.version} — ${pkg.description}
+
+Usage: roammem <command> [args]
+       roammem [--help|-h] [--version|-v]
 
 Commands:
   init   [projectRoot]                  Initialize .roam/ from project structure
@@ -126,6 +130,11 @@ export const runCli = async (args: string[]): Promise<boolean> => {
 
   if (cmd === "--help" || cmd === "-h") {
     console.log(USAGE);
+    return true;
+  }
+
+  if (cmd === "--version" || cmd === "-v") {
+    console.log(pkg.version);
     return true;
   }
 

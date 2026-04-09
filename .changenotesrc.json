@@ -1,0 +1,14 @@
+{
+  "changeDir": ".changes",
+  "changelogFile": "CHANGELOG.md",
+  "types": [
+    "feat",
+    "fix",
+    "perf",
+    "refactor",
+    "docs",
+    "style",
+    "test",
+    "chore"
+  ]
+}

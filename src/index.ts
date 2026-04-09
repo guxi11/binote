@@ -11,11 +11,12 @@ import { getOrBuildIndex, buildIndex, saveIndex, invalidateIndex } from "./core/
 import { sync } from "./core/sync-engine.js";
 import { dirNoteTemplate } from "./util/markdown.js";
 import { ensureDir } from "./util/fs-helpers.js";
+import { pkg } from "./util/pkg.js";
 import type { SearchHit } from "./types.js";
 
 const server = new McpServer({
-  name: "roammem",
-  version: "0.1.0",
+  name: pkg.name,
+  version: pkg.version,
 });
 
 // ── init ──────────────────────────────────────────────────────────────
