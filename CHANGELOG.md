@@ -13,4 +13,4 @@ All notable changes to this project will be documented in this file.
 - Add changelog and use changenotes to manage it
 
 
-[0.1.4]: https://github.com/guxi11/roammem/releases/tag/v0.1.4
+[0.1.4]: https://github.com/guxi11/roamem/releases/tag/v0.1.4
