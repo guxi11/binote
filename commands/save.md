@@ -1,5 +1,5 @@
 ---
-description: "Save current session's learnings into .roam/ notes. Captures design decisions, discoveries, and context from this conversation. Triggers on: '/roam-save', 'save to roam', 'save session notes'."
+description: "Save current session's learnings into .roam/ notes. Captures design decisions, discoveries, and context from this conversation. Triggers on: '/roammem:save', 'save to roam', 'save session notes'."
 ---
 
 # RoamMem Session Save

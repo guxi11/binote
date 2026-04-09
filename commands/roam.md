@@ -1,5 +1,5 @@
 ---
-description: "Activate roam-first mode: read .roam/ notes before source code. Auto-loads roam context when user references file paths. Use at conversation start. Triggers on: '/roam'."
+description: "Activate roam-first mode: read .roam/ notes before source code. Auto-loads roam context when user references file paths. Use at conversation start. Triggers on: '/roammem:roam'."
 ---
 
 # RoamMem — Roam-First Mode
@@ -17,7 +17,7 @@ When the user mentions or references a file path (e.g. `@src/core/scanner.ts`, `
 3. Follow any `[[links]]` in the note that are relevant to the user's question
 4. Only then read the actual source file if the roam note doesn't have enough context
 
-If the roam note is empty or skeleton-only, read the source file directly and mention that `/roam-gen` can populate it.
+If the roam note is empty or skeleton-only, read the source file directly and mention that `/roammem:gen` can populate it.
 
 ## On Activation
 
@@ -26,7 +26,7 @@ Right now, do this — and **only** this. Do not glob, do not read any other fil
 1. Read `.roam/_dir.md` (project root overview)
 2. Read `.roam/_index.json` (link graph)
 3. Report status in **one line**:
-   - If `_dir.md` is a skeleton (empty sections) or `_index.json` is nearly empty → say "roam-first mode active · notes not initialized, run `/roam-gen` to populate"
+   - If `_dir.md` is a skeleton (empty sections) or `_index.json` is nearly empty → say "roam-first mode active · notes not initialized, run `/roammem:gen` to populate"
    - Otherwise → say "roam-first mode active · N nodes in graph" plus one short sentence on what the project is about
 
 No raw dumps. No file-by-file summaries. No reading directory `_dir.md` files upfront — those load on-demand.

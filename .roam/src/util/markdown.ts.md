@@ -2,7 +2,7 @@
 
 ## Summary
 
-Three pure functions returning skeleton markdown for the three note kinds. Used by `init` to seed empty notes; user content (or `/roam-gen` output) replaces these skeletons over time.
+Three pure functions returning skeleton markdown for the three note kinds. Used by `init` to seed empty notes; user content (or `/roammem:gen` output) replaces these skeletons over time.
 
 ## Key Exports
 
@@ -12,7 +12,7 @@ Three pure functions returning skeleton markdown for the three note kinds. Used 
 
 ## Notes
 
-- Templates are intentionally minimal so the skeleton-detection logic in `/roam` activation can recognize an empty note by section count alone.
+- Templates are intentionally minimal so the skeleton-detection logic in `/roammem:roam` activation can recognize an empty note by section count alone.
 - `fileNoteTemplate` is currently unused — `init` writes `""` for file notes to make the empty state unambiguous (a header-only file would still be "non-empty" by length checks).
 
 ## Links

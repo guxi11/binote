@@ -37,10 +37,10 @@ src/                    # TypeScript source → compiles to dist/
   types.ts              # Shared types
 
 commands/               # Claude Code slash commands (plugin skills)
-  roam.md               # /roam — activate roam-first mode
-  roam-gen.md           # /roam-gen — generate note content from source
-  roam-save.md          # /roam-save — save session learnings to notes
-  roam-rule.md          # /roam-rule — emit CLAUDE.md snippet
+  roam.md               # /roammem:roam — activate roam-first mode
+  gen.md                # /roammem:gen — generate note content from source
+  save.md               # /roammem:save — save session learnings to notes
+  rule.md               # /roammem:rule — emit CLAUDE.md snippet
 
 .claude-plugin/         # Plugin manifest for Claude marketplace
 ```
@@ -59,7 +59,7 @@ Create `commands/<name>.md` with frontmatter:
 
 ```markdown
 ---
-description: "One-line description. Triggers on: '/name'."
+description: "One-line description. Triggers on: '/roammem:name'."
 argument-hint: "[optional args hint]"  # omit if no args
 ---
 

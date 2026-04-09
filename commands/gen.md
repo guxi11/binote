@@ -1,5 +1,5 @@
 ---
-description: "Generate roam note content by reading source files. Fills empty .roam/ skeletons with summaries, purpose, and [[bidirectional links]]. Triggers on: '/roam-gen', 'generate roam notes', 'fill roam notes'."
+description: "Generate roam note content by reading source files. Fills empty .roam/ skeletons with summaries, purpose, and [[bidirectional links]]. Triggers on: '/roammem:gen', 'generate roam notes', 'fill roam notes'."
 argument-hint: "[path/to/file, directory, or 'all']"
 ---
 

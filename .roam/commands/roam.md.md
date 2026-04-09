@@ -2,7 +2,7 @@
 
 ## Summary
 
-Defines the `/roam` slash command that activates roam-first mode for the rest of the conversation. Sets the rule "always read `.roam/` notes before source files" and runs an activation routine.
+Defines the `/roammem:roam` slash command that activates roam-first mode for the rest of the conversation. Sets the rule "always read `.roam/` notes before source files" and runs an activation routine.
 
 ## Notes
 
@@ -23,11 +23,11 @@ The activation routine deliberately does **not** glob and read all `_dir.md` fil
 
 Even after restricting activation to 2 file reads, the output summary itself was too verbose (multi-bullet dumps of empty skeletons). Activation now requires:
 
-- **Skeleton detection:** if `_dir.md` has empty sections or `_index.json` is nearly empty, output: `roam-first mode active · notes not initialized, run /roam-gen to populate`
+- **Skeleton detection:** if `_dir.md` has empty sections or `_index.json` is nearly empty, output: `roam-first mode active · notes not initialized, run /roammem:gen to populate`
 - **Initialized case:** output `roam-first mode active · N nodes in graph` + one short sentence about the project
 - **Hard constraint:** no raw dumps, no file-by-file summaries, no globbing of `_dir.md` files
 
-**Why:** The activation message is pure overhead before the user's real task. When notes are empty there is literally nothing to summarize — pointing at `/roam-gen` is the only useful signal. When notes exist, a terse status is enough; any deeper content should wait for the user to reference a specific path.
+**Why:** The activation message is pure overhead before the user's real task. When notes are empty there is literally nothing to summarize — pointing at `/roammem:gen` is the only useful signal. When notes exist, a terse status is enough; any deeper content should wait for the user to reference a specific path.
 
 **How to apply:** Treat the activation output as a status line, not a briefing. If you catch yourself writing bullet lists during activation, stop.
 

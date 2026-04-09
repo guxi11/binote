@@ -88,10 +88,10 @@ Add to your MCP config (`.mcp.json`, `claude_desktop_config.json`, etc.):
 
 | Command | Description |
 |---------|-------------|
-| `/roam` | Activate roam-first mode — reads `.roam/` notes before source files. When you `@file`, the roam note is read first. |
-| `/roam-gen` | Generate note content by reading source files. Fills empty skeletons with summaries and `[[links]]`. |
-| `/roam-save` | Save current session's learnings (design decisions, discoveries) into `.roam/` notes. |
-| `/roam-rule` | Emit a CLAUDE.md snippet for always-on roam-first behavior. |
+| `/roammem:roam` | Activate roam-first mode — reads `.roam/` notes before source files. When you `@file`, the roam note is read first. |
+| `/roammem:gen` | Generate note content by reading source files. Fills empty skeletons with summaries and `[[links]]`. |
+| `/roammem:save` | Save current session's learnings (design decisions, discoveries) into `.roam/` notes. |
+| `/roammem:rule` | Emit a CLAUDE.md snippet for always-on roam-first behavior. |
 
 Slash commands require plugin install. See Setup above.
 
@@ -124,10 +124,10 @@ No arguments starts the MCP server (stdio transport).
 ## Workflow
 
 1. `init` — scaffold `.roam/` with empty notes mirroring your source files
-2. `/roam-gen` — fill notes with summaries, exports, and `[[links]]`
-3. `/roam` — activate roam-first mode in any conversation
+2. `/roammem:gen` — fill notes with summaries, exports, and `[[links]]`
+3. `/roammem:roam` — activate roam-first mode in any conversation
 4. Work normally — Claude reads roam notes before source files for faster context
-5. `/roam-save` — capture session learnings back into notes
+5. `/roammem:save` — capture session learnings back into notes
 6. `sync` — after refactoring, detect structural changes and mark orphans
 
 ## Design
