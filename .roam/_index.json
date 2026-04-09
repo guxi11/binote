@@ -1,16 +1,214 @@
 {
   "forward": {
-    "_dir.md": [],
-    "src/_dir.md": [],
-    "src/core/_dir.md": [],
+    "_dir.md": [
+      "src/_dir.md",
+      "commands/_dir.md"
+    ],
+    "src/_dir.md": [
+      "src/core/_dir.md",
+      "src/util/_dir.md",
+      "src/index.ts.md",
+      "src/cli.ts.md",
+      "src/types.ts.md"
+    ],
+    "src/core/_dir.md": [
+      "src/_dir.md",
+      "src/util/_dir.md"
+    ],
+    "src/util/_dir.md": [
+      "src/_dir.md",
+      "src/core/_dir.md"
+    ],
     "src/tools/_dir.md": [],
-    "src/util/_dir.md": [],
-    "commands/_dir.md": ["commands/roam.md.md"],
-    "commands/roam.md.md": ["commands/_dir.md", "_dir.md"]
+    "src/index.ts.md": [
+      "src/cli.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/util/markdown.ts.md",
+      "src/util/fs-helpers.ts.md",
+      "src/types.ts.md"
+    ],
+    "src/cli.ts.md": [
+      "src/index.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/util/markdown.ts.md",
+      "src/util/fs-helpers.ts.md"
+    ],
+    "src/types.ts.md": [
+      "src/core/roam-paths.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/index.ts.md"
+    ],
+    "src/core/scanner.ts.md": [
+      "src/util/fs-helpers.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md"
+    ],
+    "src/core/note-io.ts.md": [
+      "src/core/roam-paths.ts.md",
+      "src/util/fs-helpers.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md"
+    ],
+    "src/core/link-parser.ts.md": [
+      "src/core/link-index.ts.md",
+      "src/core/roam-paths.ts.md"
+    ],
+    "src/core/link-index.ts.md": [
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/link-parser.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/util/fs-helpers.ts.md",
+      "src/types.ts.md"
+    ],
+    "src/core/sync-engine.ts.md": [
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/core/link-index.ts.md",
+      "src/types.ts.md"
+    ],
+    "src/core/roam-paths.ts.md": [
+      "src/types.ts.md",
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/index.ts.md",
+      "src/cli.ts.md"
+    ],
+    "src/util/fs-helpers.ts.md": [
+      "src/core/roam-paths.ts.md",
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/link-index.ts.md"
+    ],
+    "src/util/markdown.ts.md": [
+      "src/index.ts.md",
+      "src/cli.ts.md"
+    ],
+    "commands/_dir.md": [
+      "commands/roam.md.md"
+    ],
+    "commands/roam.md.md": [
+      "commands/_dir.md",
+      "_dir.md"
+    ]
   },
   "reverse": {
-    "commands/roam.md.md": ["commands/_dir.md"],
-    "commands/_dir.md": ["commands/roam.md.md"],
-    "_dir.md": ["commands/roam.md.md"]
+    "src/_dir.md": [
+      "_dir.md",
+      "src/core/_dir.md",
+      "src/util/_dir.md"
+    ],
+    "commands/_dir.md": [
+      "_dir.md",
+      "commands/roam.md.md"
+    ],
+    "src/core/_dir.md": [
+      "src/_dir.md",
+      "src/util/_dir.md"
+    ],
+    "src/util/_dir.md": [
+      "src/_dir.md",
+      "src/core/_dir.md"
+    ],
+    "src/index.ts.md": [
+      "src/_dir.md",
+      "src/cli.ts.md",
+      "src/types.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/util/markdown.ts.md"
+    ],
+    "src/cli.ts.md": [
+      "src/_dir.md",
+      "src/index.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/util/markdown.ts.md"
+    ],
+    "src/types.ts.md": [
+      "src/_dir.md",
+      "src/index.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md"
+    ],
+    "src/core/roam-paths.ts.md": [
+      "src/index.ts.md",
+      "src/cli.ts.md",
+      "src/types.ts.md",
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/link-parser.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/util/fs-helpers.ts.md"
+    ],
+    "src/core/scanner.ts.md": [
+      "src/index.ts.md",
+      "src/cli.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/util/fs-helpers.ts.md"
+    ],
+    "src/core/note-io.ts.md": [
+      "src/index.ts.md",
+      "src/cli.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/util/fs-helpers.ts.md"
+    ],
+    "src/core/link-index.ts.md": [
+      "src/index.ts.md",
+      "src/cli.ts.md",
+      "src/types.ts.md",
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/link-parser.ts.md",
+      "src/core/sync-engine.ts.md",
+      "src/core/roam-paths.ts.md",
+      "src/util/fs-helpers.ts.md"
+    ],
+    "src/core/sync-engine.ts.md": [
+      "src/index.ts.md",
+      "src/cli.ts.md",
+      "src/types.ts.md",
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/link-index.ts.md",
+      "src/core/roam-paths.ts.md"
+    ],
+    "src/util/markdown.ts.md": [
+      "src/index.ts.md",
+      "src/cli.ts.md"
+    ],
+    "src/util/fs-helpers.ts.md": [
+      "src/index.ts.md",
+      "src/cli.ts.md",
+      "src/core/scanner.ts.md",
+      "src/core/note-io.ts.md",
+      "src/core/link-index.ts.md"
+    ],
+    "src/core/link-parser.ts.md": [
+      "src/core/link-index.ts.md"
+    ],
+    "commands/roam.md.md": [
+      "commands/_dir.md"
+    ],
+    "_dir.md": [
+      "commands/roam.md.md"
+    ]
   }
 }
