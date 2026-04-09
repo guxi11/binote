@@ -14,7 +14,10 @@
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "sync-version": "node scripts/sync-version.mjs",
+    "version": "npm run sync-version && git add .claude-plugin",
+    "release": "npm version patch && git push --follow-tags && npm publish"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
