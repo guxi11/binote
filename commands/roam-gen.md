@@ -50,8 +50,10 @@ Architectural decisions, conventions within this directory.
 
 ## Link Rules
 
-- Use `[[filename]]` without extension for source files: `[[scanner]]` not `[[scanner.ts.md]]`
-- Use `[[dir/]]` for directory references
+- **Always use the full project-relative path without `.md` extension**: `[[src/core/scanner.ts]]`, NOT `[[scanner]]` or `[[scanner.ts.md]]`
+  - Bare basenames like `[[scanner]]` only resolve when globally unique. Two files sharing a name (e.g. `src/a/util.ts` + `src/b/util.ts`) will silently drop the link during index build.
+- For directories use the full path: `[[src/core]]` (resolves to `src/core/_dir.md`)
+- For standalone notes use the `_notes/` prefix: `[[_notes/architecture]]`
 - Only link to files that actually exist in the project
 - Link to things that have a meaningful relationship — not everything
 
@@ -68,9 +70,7 @@ Architectural decisions, conventions within this directory.
 2. Identify empty or skeleton-only notes (< 50 chars or only headings)
 3. For each empty note, read the corresponding source file
 4. Generate and write note content
-5. After all notes are written, rebuild the link index:
-   - Read all notes, extract `[[links]]`
-   - Write updated `_index.json`
+5. After all notes are written, call the `rebuild_index` MCP tool to refresh `_index.json` (do NOT manually read notes or write the json yourself — that wastes tokens)
 
 ## Rules
 

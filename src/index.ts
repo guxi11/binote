@@ -238,6 +238,40 @@ server.registerTool(
   }
 );
 
+// ── rebuild_index ─────────────────────────────────────────────────────
+
+server.registerTool(
+  "rebuild_index",
+  {
+    description: "Rebuild _index.json from all notes by extracting [[links]]. Use after bulk note writes to refresh forward/backlink graph without LLM token cost.",
+    inputSchema: {
+      projectRoot: z.string().describe("Absolute path to the project root"),
+    },
+  },
+  async ({ projectRoot }) => {
+    const config = makeConfig(projectRoot);
+    const index = await buildIndex(config);
+    await saveIndex(config, index);
+
+    const noteCount = Object.keys(index.forward).length;
+    const linkCount = Object.values(index.forward).reduce((n, links) => n + links.length, 0);
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify({
+            status: "rebuilt",
+            indexPath: config.indexPath,
+            notes: noteCount,
+            links: linkCount,
+          }, null, 2),
+        },
+      ],
+    };
+  }
+);
+
 // ── list_notes ────────────────────────────────────────────────────────
 
 server.registerTool(

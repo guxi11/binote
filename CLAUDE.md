@@ -1,0 +1,9 @@
+## Roam-First Context Rule
+
+This project uses `.roam/` for bidirectional-linked notes. Follow these rules:
+
+- When the user references a file path, read `.roam/<path>.md` BEFORE reading the source file
+- For directories, read `.roam/<dir>/_dir.md` first
+- Follow `[[links]]` in notes to gather related context
+- If a roam note is empty, fall back to reading source directly
+- Use `/roam-gen` to populate empty notes after reading source
