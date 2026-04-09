@@ -45,18 +45,30 @@ npm install -g roammem
 
 ## Setup
 
-### Claude Marketplace
+### Claude Plugin (recommended)
 
 ```bash
 /plugin marketplace add Guxi11/roammem
 /plugin install roammem@roammem
 ```
 
-### Claude Code
+This gives you both MCP tools and slash commands.
+
+### Claude MCP only
 
 ```bash
 claude mcp add roammem -- roammem
 ```
+
+MCP tools only — no slash commands.
+
+### Local dev
+
+```bash
+claude --plugin-dir /path/to/roammem
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup.
 
 ### Manual MCP config
 
@@ -72,18 +84,16 @@ Add to your MCP config (`.mcp.json`, `claude_desktop_config.json`, etc.):
 }
 ```
 
-### From source
+## Slash Commands
 
-```json
-{
-  "mcpServers": {
-    "roammem": {
-      "command": "node",
-      "args": ["/path/to/roammem/dist/index.js"]
-    }
-  }
-}
-```
+| Command | Description |
+|---------|-------------|
+| `/roam` | Activate roam-first mode — reads `.roam/` notes before source files. When you `@file`, the roam note is read first. |
+| `/roam-gen` | Generate note content by reading source files. Fills empty skeletons with summaries and `[[links]]`. |
+| `/roam-save` | Save current session's learnings (design decisions, discoveries) into `.roam/` notes. |
+| `/roam-rule` | Emit a CLAUDE.md snippet for always-on roam-first behavior. |
+
+Slash commands require plugin install. See Setup above.
 
 ## MCP Tools
 
@@ -111,12 +121,14 @@ roammem sync   [projectRoot]                  # Detect changes, mark orphans
 
 No arguments starts the MCP server (stdio transport).
 
-## Usage
+## Workflow
 
-1. AI calls `init` with your project root — `.roam/` is created with empty notes mirroring your source files
-2. You or the AI fill in notes with context, decisions, and `[[links]]`
-3. AI calls `query_links` to navigate the knowledge graph
-4. After refactoring, `sync` detects structural changes and marks orphans
+1. `init` — scaffold `.roam/` with empty notes mirroring your source files
+2. `/roam-gen` — fill notes with summaries, exports, and `[[links]]`
+3. `/roam` — activate roam-first mode in any conversation
+4. Work normally — Claude reads roam notes before source files for faster context
+5. `/roam-save` — capture session learnings back into notes
+6. `sync` — after refactoring, detect structural changes and mark orphans
 
 ## Design
 
