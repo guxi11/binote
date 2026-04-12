@@ -1,6 +1,6 @@
 {
   "name": "roammem",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Bidirectional-linked project memory system for AI, exposed as MCP server",
   "type": "module",
   "bin": {
