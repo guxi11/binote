@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## [0.2.1] - 2026-04-16
+
+### Bug Fixes
+
+- **pkg**: include commands/ and .claude-plugin/ in published tarball
 ## [0.2.0] - 2026-04-16
 
 ### Breaking
@@ -35,6 +41,7 @@ mv .roam .binote   # in each project that used roammem
 
 - Add changelog and use changenotes to manage it
 
+[0.2.1]: https://github.com/Guxi11/binote/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Guxi11/binote/compare/v0.1.5...v0.2.0
 [0.1.5]: https://github.com/Guxi11/binote/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/Guxi11/binote/releases/tag/v0.1.4
