@@ -3,8 +3,8 @@
 ## Setup
 
 ```bash
-git clone https://github.com/Guxi11/roammem.git
-cd roammem
+git clone https://github.com/Guxi11/backnote.git
+cd backnote
 npm install
 npm run build
 ```
@@ -26,8 +26,8 @@ src/                    # TypeScript source → compiles to dist/
   cli.ts                # CLI subcommands (init, read, write, etc.)
   core/
     scanner.ts          # Project file/dir walker
-    note-io.ts          # Read/write .roam/ notes
-    roam-paths.ts       # Path conventions, link resolution, config
+    note-io.ts          # Read/write .backnote/ notes
+    backnote-paths.ts   # Path conventions, link resolution, config
     link-parser.ts      # [[wiki-link]] extraction/replacement
     link-index.ts       # Build/cache forward+reverse link graph
     sync-engine.ts      # Detect orphaned notes after file changes
@@ -37,10 +37,10 @@ src/                    # TypeScript source → compiles to dist/
   types.ts              # Shared types
 
 commands/               # Claude Code slash commands (plugin skills)
-  roam.md               # /roammem:roam — activate roam-first mode
-  gen.md                # /roammem:gen — generate note content from source
-  save.md               # /roammem:save — save session learnings to notes
-  rule.md               # /roammem:rule — emit CLAUDE.md snippet
+  mode.md               # /backnote:mode — activate backnote-first mode
+  gen.md                # /backnote:gen  — generate note content from source
+  save.md               # /backnote:save — save session learnings to notes
+  rule.md               # /backnote:rule — emit CLAUDE.md snippet
 
 .claude-plugin/         # Plugin manifest for Claude marketplace
 ```
@@ -51,7 +51,7 @@ Two layers:
 
 1. **MCP server** (`src/index.ts`) — exposes tools (`init`, `read_note`, `write_note`, `query_links`, `search`, `sync`, `list_notes`) over stdio. Any MCP client can use these.
 
-2. **Slash commands** (`commands/*.md`) — prompt-based skills for Claude Code. These orchestrate the MCP tools with behavioral rules (e.g. "read roam notes before source files").
+2. **Slash commands** (`commands/*.md`) — prompt-based skills for Claude Code. These orchestrate the MCP tools with behavioral rules (e.g. "read backnotes before source files").
 
 ## Adding a new slash command
 
@@ -59,7 +59,7 @@ Create `commands/<name>.md` with frontmatter:
 
 ```markdown
 ---
-description: "One-line description. Triggers on: '/roammem:name'."
+description: "One-line description. Triggers on: '/backnote:name'."
 argument-hint: "[optional args hint]"  # omit if no args
 ---
 

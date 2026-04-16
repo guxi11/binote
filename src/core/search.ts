@@ -1,8 +1,8 @@
-import type { RoamConfig, SearchHit, MatchedLink, LinkRef } from "../types.js";
+import type { BacknoteConfig, SearchHit, MatchedLink, LinkRef } from "../types.js";
 import { scanExistingNotes } from "./scanner.js";
 import { readNote } from "./note-io.js";
 import { getOrBuildIndex } from "./link-index.js";
-import { resolveLinkDetailed } from "./roam-paths.js";
+import { resolveLinkDetailed } from "./backnote-paths.js";
 
 const LINK_RE = /\[\[([^\[\]]+)\]\]/g;
 
@@ -37,7 +37,7 @@ const refToMatchedLink = (ref: LinkRef): MatchedLink =>
 
 /** Shared search engine used by both CLI and MCP search tools. */
 export const searchNotes = async (
-  config: RoamConfig,
+  config: BacknoteConfig,
   query: string,
   opts: SearchOptions = {}
 ): Promise<readonly SearchHit[]> => {

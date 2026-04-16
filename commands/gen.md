@@ -1,11 +1,11 @@
 ---
-description: "Generate roam note content by reading source files. Fills empty .roam/ skeletons with summaries, purpose, and [[bidirectional links]]. Triggers on: '/roammem:gen', 'generate roam notes', 'fill roam notes'."
+description: "Generate backnote content by reading source files. Fills empty .backnote/ skeletons with summaries, purpose, and [[bidirectional links]]. Triggers on: '/backnote:gen', 'generate backnote notes', 'fill backnote notes'."
 argument-hint: "[path/to/file, directory, or 'all']"
 ---
 
-# RoamMem Note Generator
+# Backnote Note Generator
 
-You are generating meaningful content for `.roam/` notes by reading the actual source code and filling in summaries, purpose descriptions, and `[[bidirectional links]]`.
+You are generating meaningful content for `.backnote/` notes by reading the actual source code and filling in summaries, purpose descriptions, and `[[bidirectional links]]`.
 
 ## Note Format
 
@@ -61,12 +61,12 @@ Architectural decisions, conventions within this directory.
 
 ### If $ARGUMENTS is a specific file or directory:
 1. Read the source file/directory
-2. Read the existing `.roam/` note (if any)
+2. Read the existing `.backnote/` note (if any)
 3. Generate note content following the format above
-4. Write the note via the Write tool to `.roam/<path>.md`
+4. Write the note via the Write tool to `.backnote/<path>.md`
 
 ### If $ARGUMENTS is 'all' or no arguments:
-1. List all `.roam/*.md` files
+1. List all `.backnote/*.md` files
 2. Identify empty or skeleton-only notes (< 50 chars or only headings)
 3. For each empty note, read the corresponding source file
 4. Generate and write note content

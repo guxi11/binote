@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { makeConfig, projectPathToNotePath, dirToNotePath, shouldMirror, resolveLinkDetailed, notePathToProjectPath, isDirNote, isStandaloneNote } from "./core/roam-paths.js";
+import { makeConfig, projectPathToNotePath, dirToNotePath, shouldMirror, resolveLinkDetailed, notePathToProjectPath, isDirNote, isStandaloneNote } from "./core/backnote-paths.js";
 import { scanProjectStructure, scanExistingNotes } from "./core/scanner.js";
 import { readNote, writeNote, noteExists } from "./core/note-io.js";
 import { getOrBuildIndex, buildIndex, saveIndex, invalidateIndex } from "./core/link-index.js";
@@ -23,7 +23,7 @@ const server = new McpServer({
 server.registerTool(
   "init",
   {
-    description: "Initialize .roam/ directory from project structure. Scans files and creates skeleton notes. Safe to re-run.",
+    description: "Initialize .backnote/ directory from project structure. Scans files and creates skeleton notes. Safe to re-run.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root directory"),
       ignore: z.array(z.string()).optional().describe("Additional glob patterns to ignore"),
@@ -31,7 +31,7 @@ server.registerTool(
   },
   async ({ projectRoot, ignore }) => {
     const config = makeConfig(projectRoot, ignore ?? []);
-    await ensureDir(config.roamDir);
+    await ensureDir(config.backnoteDir);
     await ensureDir(config.notesDir);
 
     const { files, dirs } = await scanProjectStructure(config);
@@ -71,7 +71,7 @@ server.registerTool(
             projectFiles: files.length,
             directories: dirs.length,
             notesCreated: created,
-            roamDir: config.roamDir,
+            backnoteDir: config.backnoteDir,
           }, null, 2),
         },
       ],
@@ -108,7 +108,7 @@ const renderNote = (text: string, path: string, from?: number, to?: number): str
 server.registerTool(
   "read_note",
   {
-    description: "Read one or more RoamMem notes. Path is relative to .roam/ (e.g. 'src/index.ts.md'). Use notePaths for batch reads, from/to for line ranges.",
+    description: "Read one or more Backnotes. Path is relative to .backnote/ (e.g. 'src/index.ts.md'). Use notePaths for batch reads, from/to for line ranges.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       notePath: z.string().optional().describe("Single note path; ignored if notePaths is provided"),
@@ -146,10 +146,10 @@ server.registerTool(
 server.registerTool(
   "write_note",
   {
-    description: "Create or update a RoamMem note. Use [[filename]] or [[path/to/file]] for bidirectional links.",
+    description: "Create or update a Backnote. Use [[filename]] or [[path/to/file]] for bidirectional links.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
-      notePath: z.string().describe("Path relative to .roam/. Use '_notes/my-note.md' for standalone notes."),
+      notePath: z.string().describe("Path relative to .backnote/. Use '_notes/my-note.md' for standalone notes."),
       content: z.string().describe("Full markdown content. Use [[target]] for links."),
       createOnly: z.boolean().optional().describe("If true, fail when note already exists"),
     },
@@ -178,7 +178,7 @@ server.registerTool(
     description: "Get forward links and backlinks for a note. Returns flat lists plus detailed line-aware variants and any dangling [[X]] from this note.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
-      notePath: z.string().describe("Path to the note relative to .roam/"),
+      notePath: z.string().describe("Path to the note relative to .backnote/"),
     },
   },
   async ({ projectRoot, notePath }) => {
@@ -212,7 +212,7 @@ server.registerTool(
 server.registerTool(
   "search",
   {
-    description: "Full-text search across all RoamMem notes. Hits include resolved [[link]] targets on the matched line — use those instead of a follow-up query_links.",
+    description: "Full-text search across all Backnotes. Hits include resolved [[link]] targets on the matched line — use those instead of a follow-up query_links.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       query: z.string().describe("Search query (plain text or regex)"),
@@ -272,7 +272,7 @@ server.registerTool(
 server.registerTool(
   "sync",
   {
-    description: "Detect renamed/deleted project files and update .roam/ notes. Marks orphaned notes.",
+    description: "Detect renamed/deleted project files and update .backnote/ notes. Marks orphaned notes.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       dryRun: z.boolean().optional().describe("Report changes without applying (default: false)"),
@@ -334,7 +334,7 @@ server.registerTool(
 server.registerTool(
   "list_notes",
   {
-    description: "List all existing notes in .roam/ directory.",
+    description: "List all existing notes in .backnote/ directory.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
     },

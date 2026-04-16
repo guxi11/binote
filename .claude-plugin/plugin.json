@@ -1,23 +1,24 @@
 {
-  "name": "roammem",
-  "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .roam/ with [[wiki-style links]]",
-  "version": "0.1.7",
+  "name": "backnote",
+  "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .backnote/ with [[wiki-style links]]",
+  "version": "0.2.0",
   "author": {
     "name": "Guxi11"
   },
-  "homepage": "https://github.com/Guxi11/roammem",
-  "repository": "https://github.com/Guxi11/roammem",
+  "homepage": "https://github.com/Guxi11/backnote",
+  "repository": "https://github.com/Guxi11/backnote",
   "license": "MIT",
   "keywords": [
     "mcp",
     "memory",
     "bidirectional-links",
     "knowledge-graph",
+    "zettelkasten",
     "ai"
   ],
   "mcpServers": {
-    "roammem": {
-      "command": "roammem"
+    "backnote": {
+      "command": "backnote"
     }
   }
 }

@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { pkg } from "./util/pkg.js";
-import { makeConfig, projectPathToNotePath, dirToNotePath, shouldMirror, resolveLinkDetailed, notePathToProjectPath, isDirNote, isStandaloneNote } from "./core/roam-paths.js";
+import { makeConfig, projectPathToNotePath, dirToNotePath, shouldMirror, resolveLinkDetailed, notePathToProjectPath, isDirNote, isStandaloneNote } from "./core/backnote-paths.js";
 import { scanProjectStructure, scanExistingNotes } from "./core/scanner.js";
 import { readNote, writeNote, noteExists } from "./core/note-io.js";
 import { getOrBuildIndex, buildIndex, saveIndex, invalidateIndex } from "./core/link-index.js";
@@ -73,7 +73,7 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
     const { flags } = parseArgs(args);
     const root = rootFromFlags(flags);
     const config = makeConfig(root);
-    await ensureDir(config.roamDir);
+    await ensureDir(config.backnoteDir);
     await ensureDir(config.notesDir);
 
     const { files, dirs } = await scanProjectStructure(config);
@@ -114,7 +114,7 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
   async read(args) {
     const { positional, flags } = parseArgs(args);
     if (positional.length === 0) {
-      console.error("Usage: roammem read <notePath> [<notePath>...] [--from N] [--to M] [--lines N:M] [--root D]");
+      console.error("Usage: backnote read <notePath> [<notePath>...] [--from N] [--to M] [--lines N:M] [--root D]");
       process.exit(1);
     }
     const config = makeConfig(rootFromFlags(flags));
@@ -164,7 +164,7 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
     const { positional, flags } = parseArgs(args);
     const [notePath, contentArg] = positional;
     if (!notePath || contentArg === undefined) {
-      console.error("Usage: roammem write <notePath> <content> [--root D]");
+      console.error("Usage: backnote write <notePath> <content> [--root D]");
       process.exit(1);
     }
     const config = makeConfig(rootFromFlags(flags));
@@ -177,7 +177,7 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
     const { positional, flags } = parseArgs(args, new Set(["detail"]));
     const [notePath] = positional;
     if (!notePath) {
-      console.error("Usage: roammem links <notePath> [--detail] [--root D]");
+      console.error("Usage: backnote links <notePath> [--detail] [--root D]");
       process.exit(1);
     }
     const config = makeConfig(rootFromFlags(flags));
@@ -202,7 +202,7 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
     const { positional, flags } = parseArgs(args, new Set(["regex"]));
     const [query] = positional;
     if (!query) {
-      console.error("Usage: roammem search <query> [--regex] [--max N] [--context N] [--root D]");
+      console.error("Usage: backnote search <query> [--regex] [--max N] [--context N] [--root D]");
       process.exit(1);
     }
     const config = makeConfig(rootFromFlags(flags));
@@ -218,7 +218,7 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
     const { positional, flags } = parseArgs(args);
     const [target] = positional;
     if (!target) {
-      console.error("Usage: roammem resolve <target> [--root D]");
+      console.error("Usage: backnote resolve <target> [--root D]");
       process.exit(1);
     }
     const config = makeConfig(rootFromFlags(flags));
@@ -241,13 +241,13 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
   },
 };
 
-const USAGE = `roammem v${pkg.version} — ${pkg.description}
+const USAGE = `backnote v${pkg.version} — ${pkg.description}
 
-Usage: roammem <command> [args]
-       roammem [--help|-h] [--version|-v]
+Usage: backnote <command> [args]
+       backnote [--help|-h] [--version|-v]
 
 Commands:
-  init     [--root D]                          Initialize .roam/ from project structure
+  init     [--root D]                          Initialize .backnote/ from project structure
   list     [--root D]                          List all notes
   read     <notePath> [<notePath>...] [opts]   Read one or more notes (fuzzy fallback on miss)
              [--from N] [--to M] [--lines N:M] [--root D]

@@ -1,7 +1,7 @@
 import { join, basename } from "node:path";
-import type { RoamConfig, ResolveDetail } from "../types.js";
+import type { BacknoteConfig, ResolveDetail } from "../types.js";
 
-const DEFAULT_IGNORE = [".roam", ".git", ".gitignore", ".claude", "node_modules", ".DS_Store", "dist", "build", ".next", ".nuxt"];
+const DEFAULT_IGNORE = [".backnote", ".git", ".gitignore", ".claude", "node_modules", ".DS_Store", "dist", "build", ".next", ".nuxt"];
 const SKIP_EXTENSIONS = new Set([".json", ".md", ".txt", ".lock", ".yaml", ".yml", ".toml", ".csv", ".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2", ".ttf", ".eot", ".map", ".log"]);
 
 /** Whether a file should be mirrored based on extension and name */
@@ -14,13 +14,13 @@ export const shouldMirror = (filePath: string): boolean => {
   return !SKIP_EXTENSIONS.has(name.slice(dot).toLowerCase());
 };
 
-export const makeConfig = (projectRoot: string, extraIgnore: readonly string[] = []): RoamConfig => {
-  const roamDir = join(projectRoot, ".roam");
+export const makeConfig = (projectRoot: string, extraIgnore: readonly string[] = []): BacknoteConfig => {
+  const backnoteDir = join(projectRoot, ".backnote");
   return {
     projectRoot,
-    roamDir,
-    notesDir: join(roamDir, "_notes"),
-    indexPath: join(roamDir, "_index.json"),
+    backnoteDir,
+    notesDir: join(backnoteDir, "_notes"),
+    indexPath: join(backnoteDir, "_index.json"),
     ignore: [...DEFAULT_IGNORE, ...extraIgnore],
   };
 };
@@ -107,5 +107,5 @@ export const resolveLink = (
 };
 
 /** Absolute path for a note */
-export const noteAbsPath = (config: RoamConfig, noteRelPath: string): string =>
-  join(config.roamDir, noteRelPath);
+export const noteAbsPath = (config: BacknoteConfig, noteRelPath: string): string =>
+  join(config.backnoteDir, noteRelPath);

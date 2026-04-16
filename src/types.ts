@@ -1,8 +1,8 @@
 export const INDEX_VERSION = 2 as const;
 
-export type RoamConfig = {
+export type BacknoteConfig = {
   readonly projectRoot: string;
-  readonly roamDir: string;
+  readonly backnoteDir: string;
   readonly notesDir: string;
   readonly indexPath: string;
   readonly ignore: readonly string[];

@@ -1,5 +1,5 @@
 {
-  "name": "roammem",
+  "name": "backnote",
   "owner": {
     "name": "Guxi11"
   },
@@ -8,23 +8,24 @@
   },
   "plugins": [
     {
-      "name": "roammem",
+      "name": "backnote",
       "source": {
         "source": "npm",
-        "package": "roammem"
+        "package": "backnote"
       },
-      "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .roam/ with [[wiki-style links]]",
-      "version": "0.1.7",
+      "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .backnote/ with [[wiki-style links]]",
+      "version": "0.2.0",
       "category": "developer-tools",
       "tags": [
         "mcp",
         "memory",
         "knowledge-graph",
-        "bidirectional-links"
+        "bidirectional-links",
+        "zettelkasten"
       ],
       "mcpServers": {
-        "roammem": {
-          "command": "roammem"
+        "backnote": {
+          "command": "backnote"
         }
       }
     }

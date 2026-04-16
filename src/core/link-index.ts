@@ -1,8 +1,8 @@
-import type { RoamConfig, LinkIndex, LinkRef, Backlink } from "../types.js";
+import type { BacknoteConfig, LinkIndex, LinkRef, Backlink } from "../types.js";
 import { INDEX_VERSION } from "../types.js";
 import { scanExistingNotes } from "./scanner.js";
 import { readNote } from "./note-io.js";
-import { resolveLinkDetailed } from "./roam-paths.js";
+import { resolveLinkDetailed } from "./backnote-paths.js";
 import { readFileSafe, writeFileSafe } from "../util/fs-helpers.js";
 
 const LINK_RE = /\[\[([^\[\]]+)\]\]/g;
@@ -19,7 +19,7 @@ const scanOccurrences = (content: string): readonly Occurrence[] =>
   );
 
 /** Build link index from all notes (single pass, line-aware, dangling-tracking). */
-export const buildIndex = async (config: RoamConfig): Promise<LinkIndex> => {
+export const buildIndex = async (config: BacknoteConfig): Promise<LinkIndex> => {
   const notes = await scanExistingNotes(config);
 
   // Pass 1: collect raw occurrences per note.
@@ -67,11 +67,11 @@ export const buildIndex = async (config: RoamConfig): Promise<LinkIndex> => {
 };
 
 /** Save index to _index.json */
-export const saveIndex = async (config: RoamConfig, index: LinkIndex): Promise<void> =>
+export const saveIndex = async (config: BacknoteConfig, index: LinkIndex): Promise<void> =>
   writeFileSafe(config.indexPath, JSON.stringify(index, null, 2));
 
 /** Load cached index or rebuild. Stale (older version) caches silently rebuild. */
-export const getOrBuildIndex = async (config: RoamConfig): Promise<LinkIndex> => {
+export const getOrBuildIndex = async (config: BacknoteConfig): Promise<LinkIndex> => {
   const cached = await readFileSafe(config.indexPath);
   if (cached) {
     try {
@@ -85,7 +85,7 @@ export const getOrBuildIndex = async (config: RoamConfig): Promise<LinkIndex> =>
 };
 
 /** Invalidate cached index */
-export const invalidateIndex = async (config: RoamConfig): Promise<void> => {
+export const invalidateIndex = async (config: BacknoteConfig): Promise<void> => {
   const { removeFile } = await import("../util/fs-helpers.js");
   await removeFile(config.indexPath);
 };

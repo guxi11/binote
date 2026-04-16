@@ -1,10 +1,10 @@
 ---
-description: "Save current session's learnings into .roam/ notes. Captures design decisions, discoveries, and context from this conversation. Triggers on: '/roammem:save', 'save to roam', 'save session notes'."
+description: "Save current session's learnings into .backnote/ notes. Captures design decisions, discoveries, and context from this conversation. Triggers on: '/backnote:save', 'save to backnote', 'save session notes'."
 ---
 
-# RoamMem Session Save
+# Backnote Session Save
 
-You are distilling this conversation's learnings into `.roam/` notes — design decisions made, bugs found, architectural discoveries, non-obvious behaviors uncovered.
+You are distilling this conversation's learnings into `.backnote/` notes — design decisions made, bugs found, architectural discoveries, non-obvious behaviors uncovered.
 
 ## What to capture
 
@@ -31,10 +31,10 @@ You are distilling this conversation's learnings into `.roam/` notes — design 
 1. Review the full conversation history
 2. Identify files that were read, edited, or discussed
 3. For each file with meaningful learnings:
-   - Read the existing `.roam/<path>.md` note
+   - Read the existing `.backnote/<path>.md` note
    - Merge new insights into the appropriate section (Summary, Notes, Links)
    - Preserve existing content — append, don't overwrite
    - Add `[[links]]` to related files discovered during the session
-4. If a discovery spans multiple files or is architectural, write a standalone note to `.roam/_notes/<topic>.md`
+4. If a discovery spans multiple files or is architectural, write a standalone note to `.backnote/_notes/<topic>.md`
 5. After all writes, call the `rebuild_index` MCP tool to refresh `_index.json` (do NOT manually rebuild the json — use the tool)
 6. Report what was saved: which notes updated, which created, key insights captured

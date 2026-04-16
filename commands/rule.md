@@ -1,21 +1,21 @@
 ---
-description: "Generate a CLAUDE.md rule snippet for always-on roam-first behavior. Drop into any project with .roam/ notes. Triggers on: '/roammem:rule'."
+description: "Generate a CLAUDE.md rule snippet for always-on backnote-first behavior. Drop into any project with .backnote/ notes. Triggers on: '/backnote:rule'."
 ---
 
-# Generate Roam-First CLAUDE.md Rule
+# Generate Backnote-First CLAUDE.md Rule
 
 Write the following snippet into the project's `CLAUDE.md` (append if exists, create if not):
 
 ```markdown
-## Roam-First Context Rule
+## Backnote-First Context Rule
 
-This project uses `.roam/` for bidirectional-linked notes. Follow these rules:
+This project uses `.backnote/` for bidirectional-linked notes. Follow these rules:
 
-- When the user references a file path, read `.roam/<full-path-with-extension>.md` BEFORE reading the source file (e.g. `src/foo.tsx` → `.roam/src/foo.tsx.md`)
-- For directories, read `.roam/<dir>/_dir.md` first
+- When the user references a file path, read `.backnote/<full-path-with-extension>.md` BEFORE reading the source file (e.g. `src/foo.tsx` → `.backnote/src/foo.tsx.md`)
+- For directories, read `.backnote/<dir>/_dir.md` first
 - Follow `[[links]]` in notes to gather related context
-- If a roam note is empty, fall back to reading source directly
-- Use `/roammem:gen` to populate empty notes after reading source
+- If a backnote is empty, fall back to reading source directly
+- Use `/backnote:gen` to populate empty notes after reading source
 ```
 
 After writing, confirm to the user what was added and where.
