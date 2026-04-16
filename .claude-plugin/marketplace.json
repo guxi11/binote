@@ -10,8 +10,8 @@
     {
       "name": "binote",
       "source": {
-        "source": "npm",
-        "package": "binote"
+        "source": "github",
+        "repo": "Guxi11/binote"
       },
       "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .binote/ with [[wiki-style links]]",
       "version": "0.2.1",
@@ -25,7 +25,8 @@
       ],
       "mcpServers": {
         "binote": {
-          "command": "binote"
+          "command": "npx",
+          "args": ["-y", "binote"]
         }
       }
     }
