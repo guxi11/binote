@@ -1,8 +1,8 @@
-import type { BacknoteConfig, SearchHit, MatchedLink, LinkRef } from "../types.js";
+import type { BinoteConfig, SearchHit, MatchedLink, LinkRef } from "../types.js";
 import { scanExistingNotes } from "./scanner.js";
 import { readNote } from "./note-io.js";
 import { getOrBuildIndex } from "./link-index.js";
-import { resolveLinkDetailed } from "./backnote-paths.js";
+import { resolveLinkDetailed } from "./binote-paths.js";
 
 const LINK_RE = /\[\[([^\[\]]+)\]\]/g;
 
@@ -37,7 +37,7 @@ const refToMatchedLink = (ref: LinkRef): MatchedLink =>
 
 /** Shared search engine used by both CLI and MCP search tools. */
 export const searchNotes = async (
-  config: BacknoteConfig,
+  config: BinoteConfig,
   query: string,
   opts: SearchOptions = {}
 ): Promise<readonly SearchHit[]> => {

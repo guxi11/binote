@@ -1,10 +1,10 @@
 {
-  "name": "backnote",
+  "name": "binote",
   "version": "0.2.0",
   "description": "Bidirectional-linked project memory system for AI, exposed as MCP server",
   "type": "module",
   "bin": {
-    "backnote": "dist/index.js"
+    "binote": "dist/index.js"
   },
   "files": [
     "dist",
@@ -43,6 +43,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Guxi11/backnote.git"
+    "url": "https://github.com/Guxi11/binote.git"
   }
 }

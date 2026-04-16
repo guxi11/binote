@@ -1,4 +1,4 @@
-# backnote 工具评估框架
+# binote 工具评估框架
 
 评估这个工具得拆成两个独立问题：**用了多少**（描述性）和**用得值不值**（因果性）。后者比前者难一个数量级，单看"感觉变好了"是自我确认偏误。
 
@@ -19,7 +19,7 @@
 - 空 note 率（触发 fallback 的潜在比例）
 
 **行为层（最关键）**
-- **note-first 命中率**：读 `src/X.ts` 前有没有先读 `.backnote/src/X.ts.md` —— 这是 CLAUDE.md 规则的实际遵从率
+- **note-first 命中率**：读 `src/X.ts` 前有没有先读 `.binote/src/X.ts.md` —— 这是 CLAUDE.md 规则的实际遵从率
 - 链接遍历深度分布
 - Fallback 触发率（note 空→回落 source）
 
@@ -29,7 +29,7 @@
 
 | | Treatment | Control |
 |---|---|---|
-| backnote MCP | on | off |
+| binote MCP | on | off |
 | 其余 | 同 prompt / 同 commit / 同 model / 同 temp | 同上 |
 
 配对比独立组方差小一个数量级，优先选配对。
@@ -37,7 +37,7 @@
 **任务集（20–30 个）**
 
 从 git 历史挑具备 ground truth 的真实任务（原 PR diff + 测试）。**刻意分两类**：
-- **Cross-file**：需跨多文件推理 → backnote 主战场
+- **Cross-file**：需跨多文件推理 → binote 主战场
 - **Single-file**：对照。若这里也大幅受益，说明在测 placebo
 
 不分层直接合并会稀释信号。
@@ -59,10 +59,10 @@
 
 ## 三、必须控的混杂
 
-1. **选择偏差**：主动调用 backnote 的会话本身就是"Claude 状态好"的会话 → 强制开/关而非让模型自选
+1. **选择偏差**：主动调用 binote 的会话本身就是"Claude 状态好"的会话 → 强制开/关而非让模型自选
 2. **Note 质量共变**：文档好的仓库代码往往也好 → 锁同一 commit snapshot
 3. **Stale 污染**：过期 note 会主动带偏 → 分 fresh/stale 两桶报 effect
-4. **Prompt leakage**：CLAUDE.md 里的"先读 backnote"指令必须在 control 组同步移除，否则你在测的是指令而不是工具
+4. **Prompt leakage**：CLAUDE.md 里的"先读 binote"指令必须在 control 组同步移除，否则你在测的是指令而不是工具
 
 ## 四、MVP（别一上来搞大实验）
 

@@ -1,10 +1,10 @@
-# Backnote
+# Binote
 
-Bidirectional-linked project memory for AI. Mirrors your codebase into `.backnote/` with `[[wiki-style links]]`, giving AI agents structured context about your project's architecture, design decisions, and file relationships.
+Bidirectional-linked project memory for AI. Mirrors your codebase into `.binote/` with `[[wiki-style links]]`, giving AI agents structured context about your project's architecture, design decisions, and file relationships.
 
 ## Why
 
-AI tools read code but lack project context — why a file exists, how modules relate, what design tradeoffs were made. Backnote fills this gap with a local knowledge graph that lives alongside your code, inspired by Zettelkasten and bidirectional-linking note systems.
+AI tools read code but lack project context — why a file exists, how modules relate, what design tradeoffs were made. Binote fills this gap with a local knowledge graph that lives alongside your code, inspired by Zettelkasten and bidirectional-linking note systems.
 
 ## How it works
 
@@ -14,7 +14,7 @@ myproject/
 │   ├── index.ts
 │   └── utils/
 │       └── helpers.ts
-├── .backnote/              ← generated
+├── .binote/              ← generated
 │   ├── _dir.md             ← root overview
 │   ├── _notes/             ← standalone docs (architecture, design, etc.)
 │   │   └── architecture.md
@@ -40,7 +40,7 @@ Query links to traverse the graph in both directions.
 ## Install
 
 ```bash
-npm install -g backnote
+npm install -g binote
 ```
 
 ## Setup
@@ -48,8 +48,8 @@ npm install -g backnote
 ### Claude Plugin (recommended)
 
 ```bash
-/plugin marketplace add Guxi11/backnote
-/plugin install backnote@backnote
+/plugin marketplace add Guxi11/binote
+/plugin install binote@binote
 ```
 
 This gives you both MCP tools and slash commands.
@@ -57,7 +57,7 @@ This gives you both MCP tools and slash commands.
 ### Claude MCP only
 
 ```bash
-claude mcp add backnote -- backnote
+claude mcp add binote -- binote
 ```
 
 MCP tools only — no slash commands.
@@ -65,7 +65,7 @@ MCP tools only — no slash commands.
 ### Local dev
 
 ```bash
-claude --plugin-dir /path/to/backnote
+claude --plugin-dir /path/to/binote
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup.
@@ -77,8 +77,8 @@ Add to your MCP config (`.mcp.json`, `claude_desktop_config.json`, etc.):
 ```json
 {
   "mcpServers": {
-    "backnote": {
-      "command": "backnote"
+    "binote": {
+      "command": "binote"
     }
   }
 }
@@ -88,10 +88,10 @@ Add to your MCP config (`.mcp.json`, `claude_desktop_config.json`, etc.):
 
 | Command | Description |
 |---------|-------------|
-| `/backnote:mode` | Activate backnote-first mode — reads `.backnote/` notes before source files. When you `@file`, the backnote is read first. |
-| `/backnote:gen`  | Generate note content by reading source files. Fills empty skeletons with summaries and `[[links]]`. |
-| `/backnote:save` | Save current session's learnings (design decisions, discoveries) into `.backnote/` notes. |
-| `/backnote:rule` | Emit a CLAUDE.md snippet for always-on backnote-first behavior. |
+| `/binote:mode` | Activate binote-first mode — reads `.binote/` notes before source files. When you `@file`, the binote is read first. |
+| `/binote:gen`  | Generate note content by reading source files. Fills empty skeletons with summaries and `[[links]]`. |
+| `/binote:save` | Save current session's learnings (design decisions, discoveries) into `.binote/` notes. |
+| `/binote:rule` | Emit a CLAUDE.md snippet for always-on binote-first behavior. |
 
 Slash commands require plugin install. See Setup above.
 
@@ -99,35 +99,35 @@ Slash commands require plugin install. See Setup above.
 
 | Tool | Description |
 |------|-------------|
-| `init` | Scan project and generate `.backnote/` skeleton |
+| `init` | Scan project and generate `.binote/` skeleton |
 | `read_note` | Read a note by path |
 | `write_note` | Create or update a note with `[[links]]` |
 | `query_links` | Get forward links and backlinks for a note |
 | `search` | Full-text search across all notes |
 | `sync` | Detect file renames/deletes, mark orphaned notes |
-| `list_notes` | List all notes in `.backnote/` |
+| `list_notes` | List all notes in `.binote/` |
 
 ## CLI
 
 ```bash
-backnote init   [projectRoot]                  # Initialize .backnote/
-backnote list   [projectRoot]                  # List all notes
-backnote read   <notePath> [projectRoot]       # Read a note
-backnote write  <notePath> <content> [root]    # Write a note
-backnote links  <notePath> [projectRoot]       # Query forward/backlinks
-backnote search <query> [projectRoot]          # Full-text search
-backnote sync   [projectRoot]                  # Detect changes, mark orphans
+binote init   [projectRoot]                  # Initialize .binote/
+binote list   [projectRoot]                  # List all notes
+binote read   <notePath> [projectRoot]       # Read a note
+binote write  <notePath> <content> [root]    # Write a note
+binote links  <notePath> [projectRoot]       # Query forward/backlinks
+binote search <query> [projectRoot]          # Full-text search
+binote sync   [projectRoot]                  # Detect changes, mark orphans
 ```
 
 No arguments starts the MCP server (stdio transport).
 
 ## Workflow
 
-1. `init` — scaffold `.backnote/` with empty notes mirroring your source files
-2. `/backnote:gen` — fill notes with summaries, exports, and `[[links]]`
-3. `/backnote:mode` — activate backnote-first mode in any conversation
-4. Work normally — Claude reads backnotes before source files for faster context
-5. `/backnote:save` — capture session learnings back into notes
+1. `init` — scaffold `.binote/` with empty notes mirroring your source files
+2. `/binote:gen` — fill notes with summaries, exports, and `[[links]]`
+3. `/binote:mode` — activate binote-first mode in any conversation
+4. Work normally — Claude reads binotes before source files for faster context
+5. `/binote:save` — capture session learnings back into notes
 6. `sync` — after refactoring, detect structural changes and mark orphans
 
 ## Design
@@ -140,15 +140,15 @@ No arguments starts the MCP server (stdio transport).
 
 ## Migrating from `roammem`
 
-Backnote was previously published as `roammem`. To upgrade:
+Binote was previously published as `roammem`. To upgrade:
 
 ```bash
 npm uninstall -g roammem
-npm install -g backnote
-mv .roam .backnote        # in each project that used roammem
+npm install -g binote
+mv .roam .binote        # in each project that used roammem
 ```
 
-Slash command prefix changed from `/roammem:*` to `/backnote:*`, and `/roammem:roam` was renamed to `/backnote:mode`.
+Slash command prefix changed from `/roammem:*` to `/binote:*`, and `/roammem:roam` was renamed to `/binote:mode`.
 
 ## License
 

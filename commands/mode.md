@@ -1,33 +1,33 @@
 ---
-description: "Activate backnote-first mode: read .backnote/ notes before source code. Auto-loads backnote context when user references file paths. Use at conversation start. Triggers on: '/backnote:mode'."
+description: "Activate binote-first mode: read .binote/ notes before source code. Auto-loads binote context when user references file paths. Use at conversation start. Triggers on: '/binote:mode'."
 ---
 
-# Backnote — Backnote-First Mode
+# Binote — Binote-First Mode
 
 From this point forward in the conversation, follow these rules:
 
 ## Core Rule
 
-**Always read the `.backnote/` note before reading a source file.**
+**Always read the `.binote/` note before reading a source file.**
 
 When the user mentions or references a file path (e.g. `@src/core/scanner.ts`, `src/core/scanner.ts`, or just "the scanner module"):
 
-1. Read `.backnote/<path>.md` first (e.g. `.backnote/src/core/scanner.ts.md`)
-2. If the path is a directory, read `.backnote/<path>/_dir.md`
+1. Read `.binote/<path>.md` first (e.g. `.binote/src/core/scanner.ts.md`)
+2. If the path is a directory, read `.binote/<path>/_dir.md`
 3. Follow any `[[links]]` in the note that are relevant to the user's question
-4. Only then read the actual source file if the backnote doesn't have enough context
+4. Only then read the actual source file if the binote doesn't have enough context
 
-If the backnote is empty or skeleton-only, read the source file directly and mention that `/backnote:gen` can populate it.
+If the binote is empty or skeleton-only, read the source file directly and mention that `/binote:gen` can populate it.
 
 ## On Activation
 
 Right now, do this — and **only** this. Do not glob, do not read any other files:
 
-1. Read `.backnote/_dir.md` (project root overview)
-2. Read `.backnote/_index.json` (link graph)
+1. Read `.binote/_dir.md` (project root overview)
+2. Read `.binote/_index.json` (link graph)
 3. Report status in **one line**:
-   - If `_dir.md` is a skeleton (empty sections) or `_index.json` is nearly empty → say "backnote-first mode active · notes not initialized, run `/backnote:gen` to populate"
-   - Otherwise → say "backnote-first mode active · N nodes in graph" plus one short sentence on what the project is about
+   - If `_dir.md` is a skeleton (empty sections) or `_index.json` is nearly empty → say "binote-first mode active · notes not initialized, run `/binote:gen` to populate"
+   - Otherwise → say "binote-first mode active · N nodes in graph" plus one short sentence on what the project is about
 
 No raw dumps. No file-by-file summaries. No reading directory `_dir.md` files upfront — those load on-demand.
 

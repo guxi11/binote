@@ -1,8 +1,8 @@
 export const INDEX_VERSION = 2 as const;
 
-export type BacknoteConfig = {
+export type BinoteConfig = {
   readonly projectRoot: string;
-  readonly backnoteDir: string;
+  readonly binoteDir: string;
   readonly notesDir: string;
   readonly indexPath: string;
   readonly ignore: readonly string[];

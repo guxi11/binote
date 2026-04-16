@@ -1,12 +1,12 @@
 {
-  "name": "backnote",
-  "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .backnote/ with [[wiki-style links]]",
+  "name": "binote",
+  "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .binote/ with [[wiki-style links]]",
   "version": "0.2.0",
   "author": {
     "name": "Guxi11"
   },
-  "homepage": "https://github.com/Guxi11/backnote",
-  "repository": "https://github.com/Guxi11/backnote",
+  "homepage": "https://github.com/Guxi11/binote",
+  "repository": "https://github.com/Guxi11/binote",
   "license": "MIT",
   "keywords": [
     "mcp",
@@ -17,8 +17,8 @@
     "ai"
   ],
   "mcpServers": {
-    "backnote": {
-      "command": "backnote"
+    "binote": {
+      "command": "binote"
     }
   }
 }

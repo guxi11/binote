@@ -1,5 +1,5 @@
 {
-  "name": "backnote",
+  "name": "binote",
   "owner": {
     "name": "Guxi11"
   },
@@ -8,12 +8,12 @@
   },
   "plugins": [
     {
-      "name": "backnote",
+      "name": "binote",
       "source": {
         "source": "npm",
-        "package": "backnote"
+        "package": "binote"
       },
-      "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .backnote/ with [[wiki-style links]]",
+      "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .binote/ with [[wiki-style links]]",
       "version": "0.2.0",
       "category": "developer-tools",
       "tags": [
@@ -24,8 +24,8 @@
         "zettelkasten"
       ],
       "mcpServers": {
-        "backnote": {
-          "command": "backnote"
+        "binote": {
+          "command": "binote"
         }
       }
     }
