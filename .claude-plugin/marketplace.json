@@ -13,7 +13,7 @@
         "source": "local"
       },
       "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .binote/ with [[wiki-style links]]",
-      "version": "0.2.4",
+      "version": "0.2.5",
       "category": "developer-tools",
       "tags": [
         "mcp",
