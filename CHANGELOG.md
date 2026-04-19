@@ -18,5 +18,5 @@ All notable changes to this project will be documented in this file.
 
 - Add changelog and use changenotes to manage it
 
-[0.1.5]: https://github.com/guxi11/roammem/compare/v0.1.4...v0.1.5
-[0.1.4]: https://github.com/guxi11/roammem/releases/tag/v0.1.4
+[0.1.5]: https://github.com/Guxi11/binote/compare/v0.1.4...v0.1.5
+[0.1.4]: https://github.com/Guxi11/binote/releases/tag/v0.1.4

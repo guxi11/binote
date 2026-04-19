@@ -1,11 +1,11 @@
 ---
-description: "Generate roam note content by reading source files. Fills empty .roam/ skeletons with summaries, purpose, and [[bidirectional links]]. Triggers on: '/roammem:gen', 'generate roam notes', 'fill roam notes'."
+description: "Generate binote note content by reading source files. Fills empty .binote/ skeletons with summaries, purpose, and [[bidirectional links]]. Triggers on: '/binote:gen', 'generate binote notes', 'fill binote notes'."
 argument-hint: "[path/to/file, directory, or 'all']"
 ---
 
-# RoamMem Note Generator
+# Binote Note Generator
 
-You are generating meaningful content for `.roam/` notes by reading the actual source code and filling in summaries, purpose descriptions, and `[[bidirectional links]]`.
+You are generating meaningful content for `.binote/` notes by reading the actual source code and filling in summaries, purpose descriptions, and `[[bidirectional links]]`.
 
 ## Note Format
 
@@ -61,12 +61,12 @@ Architectural decisions, conventions within this directory.
 
 ### If $ARGUMENTS is a specific file or directory:
 1. Read the source file/directory
-2. Read the existing `.roam/` note (if any)
+2. Read the existing `.binote/` note (if any)
 3. Generate note content following the format above
-4. Write the note via the Write tool to `.roam/<path>.md`
+4. Write the note via the Write tool to `.binote/<path>.md`
 
 ### If $ARGUMENTS is 'all' or no arguments:
-1. List all `.roam/*.md` files
+1. List all `.binote/*.md` files
 2. Identify empty or skeleton-only notes (< 50 chars or only headings)
 3. For each empty note, read the corresponding source file
 4. Generate and write note content

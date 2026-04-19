@@ -1,21 +1,21 @@
 ---
-description: "Generate a CLAUDE.md rule snippet for always-on roam-first behavior. Drop into any project with .roam/ notes. Triggers on: '/roammem:rule'."
+description: "Generate a CLAUDE.md rule snippet for always-on binote-first behavior. Drop into any project with .binote/ notes. Triggers on: '/binote:rule'."
 ---
 
-# Generate Roam-First CLAUDE.md Rule
+# Generate Binote-First CLAUDE.md Rule
 
 Write the following snippet into the project's `CLAUDE.md` (append if exists, create if not):
 
 ```markdown
-## Roam-First Context Rule
+## Binote-First Context Rule
 
-This project uses `.roam/` for bidirectional-linked notes. Follow these rules:
+This project uses `.binote/` for bidirectional-linked notes. Follow these rules:
 
-- When the user references a file path, read `.roam/<full-path-with-extension>.md` BEFORE reading the source file (e.g. `src/foo.tsx` → `.roam/src/foo.tsx.md`)
-- For directories, read `.roam/<dir>/_dir.md` first
+- When the user references a file path, read `.binote/<full-path-with-extension>.md` BEFORE reading the source file (e.g. `src/foo.tsx` → `.binote/src/foo.tsx.md`)
+- For directories, read `.binote/<dir>/_dir.md` first
 - Follow `[[links]]` in notes to gather related context
-- If a roam note is empty, fall back to reading source directly
-- Use `/roammem:gen` to populate empty notes after reading source
+- If a binote note is empty, fall back to reading source directly
+- Use `/binote:gen` to populate empty notes after reading source
 ```
 
 After writing, confirm to the user what was added and where.

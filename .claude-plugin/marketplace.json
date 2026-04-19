@@ -1,5 +1,5 @@
 {
-  "name": "roammem",
+  "name": "binote",
   "owner": {
     "name": "Guxi11"
   },
@@ -8,13 +8,12 @@
   },
   "plugins": [
     {
-      "name": "roammem",
+      "name": "binote",
       "source": {
-        "source": "npm",
-        "package": "roammem"
+        "source": "local"
       },
-      "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .roam/ with [[wiki-style links]]",
-      "version": "0.1.7",
+      "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .binote/ with [[wiki-style links]]",
+      "version": "0.2.3",
       "category": "developer-tools",
       "tags": [
         "mcp",
@@ -23,8 +22,8 @@
         "bidirectional-links"
       ],
       "mcpServers": {
-        "roammem": {
-          "command": "roammem"
+        "binote": {
+          "command": "binote"
         }
       }
     }

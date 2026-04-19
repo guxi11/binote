@@ -1,10 +1,10 @@
-# RoamMem
+# Binote
 
-Bidirectional-linked project memory for AI. Mirrors your codebase into `.roam/` with `[[wiki-style links]]`, giving AI agents structured context about your project's architecture, design decisions, and file relationships.
+Bidirectional-linked project memory for AI. Mirrors your codebase into `.binote/` with `[[wiki-style links]]`, giving AI agents structured context about your project's architecture, design decisions, and file relationships.
 
 ## Why
 
-AI tools read code but lack project context — why a file exists, how modules relate, what design tradeoffs were made. RoamMem fills this gap with a local knowledge graph that lives alongside your code.
+AI tools read code but lack project context — why a file exists, how modules relate, what design tradeoffs were made. Binote fills this gap with a local knowledge graph that lives alongside your code.
 
 ## How it works
 
@@ -14,7 +14,7 @@ myproject/
 │   ├── index.ts
 │   └── utils/
 │       └── helpers.ts
-├── .roam/                  ← generated
+├── .binote/                  ← generated
 │   ├── _dir.md             ← root overview
 │   ├── _notes/             ← standalone docs (architecture, design, etc.)
 │   │   └── architecture.md
@@ -40,7 +40,7 @@ Query links to traverse the graph in both directions.
 ## Install
 
 ```bash
-npm install -g roammem
+npm install -g binote
 ```
 
 ## Setup
@@ -48,8 +48,8 @@ npm install -g roammem
 ### Claude Plugin (recommended)
 
 ```bash
-/plugin marketplace add Guxi11/roammem
-/plugin install roammem@roammem
+/plugin marketplace add Guxi11/binote
+/plugin install binote@binote
 ```
 
 This gives you both MCP tools and slash commands.
@@ -57,7 +57,7 @@ This gives you both MCP tools and slash commands.
 ### Claude MCP only
 
 ```bash
-claude mcp add roammem -- roammem
+claude mcp add binote -- binote
 ```
 
 MCP tools only — no slash commands.
@@ -65,7 +65,7 @@ MCP tools only — no slash commands.
 ### Local dev
 
 ```bash
-claude --plugin-dir /path/to/roammem
+claude --plugin-dir /path/to/binote
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup.
@@ -77,8 +77,8 @@ Add to your MCP config (`.mcp.json`, `claude_desktop_config.json`, etc.):
 ```json
 {
   "mcpServers": {
-    "roammem": {
-      "command": "roammem"
+    "binote": {
+      "command": "binote"
     }
   }
 }
@@ -88,10 +88,10 @@ Add to your MCP config (`.mcp.json`, `claude_desktop_config.json`, etc.):
 
 | Command | Description |
 |---------|-------------|
-| `/roammem:roam` | Activate roam-first mode — reads `.roam/` notes before source files. When you `@file`, the roam note is read first. |
-| `/roammem:gen` | Generate note content by reading source files. Fills empty skeletons with summaries and `[[links]]`. |
-| `/roammem:save` | Save current session's learnings (design decisions, discoveries) into `.roam/` notes. |
-| `/roammem:rule` | Emit a CLAUDE.md snippet for always-on roam-first behavior. |
+| `/binote:mode` | Activate binote-first mode — reads `.binote/` notes before source files. When you `@file`, the binote note is read first. |
+| `/binote:gen` | Generate note content by reading source files. Fills empty skeletons with summaries and `[[links]]`. |
+| `/binote:save` | Save current session's learnings (design decisions, discoveries) into `.binote/` notes. |
+| `/binote:rule` | Emit a CLAUDE.md snippet for always-on binote-first behavior. |
 
 Slash commands require plugin install. See Setup above.
 
@@ -99,35 +99,35 @@ Slash commands require plugin install. See Setup above.
 
 | Tool | Description |
 |------|-------------|
-| `init` | Scan project and generate `.roam/` skeleton |
+| `init` | Scan project and generate `.binote/` skeleton |
 | `read_note` | Read a note by path |
 | `write_note` | Create or update a note with `[[links]]` |
 | `query_links` | Get forward links and backlinks for a note |
 | `search` | Full-text search across all notes |
 | `sync` | Detect file renames/deletes, mark orphaned notes |
-| `list_notes` | List all notes in `.roam/` |
+| `list_notes` | List all notes in `.binote/` |
 
 ## CLI
 
 ```bash
-roammem init   [projectRoot]                  # Initialize .roam/
-roammem list   [projectRoot]                  # List all notes
-roammem read   <notePath> [projectRoot]       # Read a note
-roammem write  <notePath> <content> [root]    # Write a note
-roammem links  <notePath> [projectRoot]       # Query forward/backlinks
-roammem search <query> [projectRoot]          # Full-text search
-roammem sync   [projectRoot]                  # Detect changes, mark orphans
+binote init   [projectRoot]                  # Initialize .binote/
+binote list   [projectRoot]                  # List all notes
+binote read   <notePath> [projectRoot]       # Read a note
+binote write  <notePath> <content> [root]    # Write a note
+binote links  <notePath> [projectRoot]       # Query forward/backlinks
+binote search <query> [projectRoot]          # Full-text search
+binote sync   [projectRoot]                  # Detect changes, mark orphans
 ```
 
 No arguments starts the MCP server (stdio transport).
 
 ## Workflow
 
-1. `init` — scaffold `.roam/` with empty notes mirroring your source files
-2. `/roammem:gen` — fill notes with summaries, exports, and `[[links]]`
-3. `/roammem:roam` — activate roam-first mode in any conversation
-4. Work normally — Claude reads roam notes before source files for faster context
-5. `/roammem:save` — capture session learnings back into notes
+1. `init` — scaffold `.binote/` with empty notes mirroring your source files
+2. `/binote:gen` — fill notes with summaries, exports, and `[[links]]`
+3. `/binote:mode` — activate binote-first mode in any conversation
+4. Work normally — Claude reads binote notes before source files for faster context
+5. `/binote:save` — capture session learnings back into notes
 6. `sync` — after refactoring, detect structural changes and mark orphans
 
 ## Design

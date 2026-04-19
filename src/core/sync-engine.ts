@@ -1,7 +1,7 @@
-import type { RoamConfig, SyncResult } from "../types.js";
+import type { BinoteConfig, SyncResult } from "../types.js";
 import { scanProjectFiles, scanExistingNotes } from "./scanner.js";
 import { readNote, writeNote } from "./note-io.js";
-import { notePathToProjectPath } from "./roam-paths.js";
+import { notePathToProjectPath } from "./binote-paths.js";
 import { buildIndex, saveIndex } from "./link-index.js";
 
 /** Detect orphaned notes (project file deleted, note still exists) */
@@ -17,7 +17,7 @@ const findOrphans = (
 };
 
 /** Mark a note as orphaned by prepending a comment */
-const markOrphaned = async (config: RoamConfig, notePath: string): Promise<void> => {
+const markOrphaned = async (config: BinoteConfig, notePath: string): Promise<void> => {
   const content = await readNote(config, notePath);
   if (!content || content.includes("<!-- ORPHANED")) return;
   await writeNote(
@@ -28,7 +28,7 @@ const markOrphaned = async (config: RoamConfig, notePath: string): Promise<void>
 };
 
 /** Full sync: detect orphans, mark them, rebuild index */
-export const sync = async (config: RoamConfig, dryRun = false): Promise<SyncResult> => {
+export const sync = async (config: BinoteConfig, dryRun = false): Promise<SyncResult> => {
   const projectFiles = await scanProjectFiles(config);
   const noteFiles = await scanExistingNotes(config);
   const orphaned = findOrphans(projectFiles, noteFiles);
