@@ -10,7 +10,8 @@
     {
       "name": "binote",
       "source": {
-        "source": "local"
+        "source": "npm",
+        "package": "binote"
       },
       "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .binote/ with [[wiki-style links]]",
       "version": "0.2.7",
