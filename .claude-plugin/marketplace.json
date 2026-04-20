@@ -9,10 +9,7 @@
   "plugins": [
     {
       "name": "binote",
-      "source": {
-        "source": "npm",
-        "package": "binote"
-      },
+      "source": ".",
       "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .binote/ with [[wiki-style links]]",
       "version": "0.2.8",
       "category": "developer-tools",
@@ -24,7 +21,8 @@
       ],
       "mcpServers": {
         "binote": {
-          "command": "binote"
+          "command": "npx",
+          "args": ["-y", "binote"]
         }
       }
     }

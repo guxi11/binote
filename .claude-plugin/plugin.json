@@ -17,7 +17,8 @@
   ],
   "mcpServers": {
     "binote": {
-      "command": "binote"
+      "command": "npx",
+      "args": ["-y", "binote"]
     }
   }
 }
