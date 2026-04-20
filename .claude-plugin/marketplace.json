@@ -14,7 +14,7 @@
         "package": "binote"
       },
       "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .binote/ with [[wiki-style links]]",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "category": "developer-tools",
       "tags": [
         "mcp",
@@ -26,7 +26,10 @@
       "mcpServers": {
         "binote": {
           "command": "npx",
-          "args": ["-y", "binote"]
+          "args": [
+            "-y",
+            "binote"
+          ]
         }
       }
     }

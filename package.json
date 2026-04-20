@@ -1,6 +1,6 @@
 {
   "name": "binote",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "Bidirectional-linked project memory system for AI, exposed as MCP server",
   "type": "module",
   "bin": {
