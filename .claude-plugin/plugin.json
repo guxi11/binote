@@ -1,7 +1,7 @@
 {
   "name": "binote",
   "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .binote/ with [[wiki-style links]]",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "author": {
     "name": "Guxi11"
   },
@@ -18,7 +18,10 @@
   "mcpServers": {
     "binote": {
       "command": "npx",
-      "args": ["-y", "binote"]
+      "args": [
+        "-y",
+        "binote"
+      ]
     }
   }
 }
