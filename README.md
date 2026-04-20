@@ -49,7 +49,7 @@ npm install -g binote
 
 ```bash
 /plugin marketplace add Guxi11/binote
-/plugin install binote@binote
+/plugin install binote
 ```
 
 This gives you both MCP tools and slash commands.
