@@ -41,7 +41,6 @@ src/                    # TypeScript source → compiles to dist/
 
 commands/               # Claude Code slash commands (plugin skills)
   mode.md               # /binote:mode — activate binote-first mode
-  gen.md                # /binote:gen — generate note content from source
   save.md               # /binote:save — save session learnings to notes
   rule.md               # /binote:rule — emit CLAUDE.md snippet
 
@@ -52,7 +51,7 @@ commands/               # Claude Code slash commands (plugin skills)
 
 Two layers:
 
-1. **MCP server** (`src/index.ts`) — exposes tools (`init`, `read_note`, `write_note`, `query_links`, `search`, `sync`, `list_notes`) over stdio. Any MCP client can use these.
+1. **MCP server** (`src/index.ts`) — exposes tools (`init`, `read_note`, `write_note`, `search`, `sync`, `list_notes`, `rebuild_index`) over stdio. Any MCP client can use these.
 
 2. **Slash commands** (`commands/*.md`) — prompt-based skills for Claude Code. These orchestrate the MCP tools with behavioral rules (e.g. "read binote notes before source files").
 

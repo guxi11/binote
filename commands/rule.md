@@ -7,16 +7,15 @@ description: "Generate a CLAUDE.md rule snippet for always-on binote-first behav
 Write the following snippet into the project's `CLAUDE.md` (append if exists, create if not):
 
 ```markdown
-## Binote-First Context Rule
+## Binote-First Context Rule (MANDATORY)
 
-This project uses `.binote/` for bidirectional-linked notes. Follow these rules:
+This project uses `.binote/` for bidirectional-linked notes. These rules are **non-negotiable**:
 
-- When the user references a file path, use the `read_note` MCP tool (with `projectRoot` and `notePath`) to read the binote note BEFORE reading the source file (e.g. `src/foo.tsx` → `read_note` with notePath `src/foo.tsx.md`)
-- For directories, use `read_note` with notePath `<dir>/_dir.md`
-- **Always use the `read_note` MCP tool** to read binote notes — never read `.binote/` files directly with the Read tool, so that reads are logged
-- Follow `[[links]]` in notes to gather related context
-- If a binote note is empty, fall back to reading source directly
-- Use `/binote:gen` to populate empty notes after reading source
+1. **BEFORE reading any source file**, you MUST first call `read_note` MCP tool with `depth: 1` to get the binote note and all linked context. This applies to EVERY file read — no exceptions.
+   - `src/foo.tsx` → `read_note(notePath: "src/foo.tsx.md", depth: 1)` FIRST, then read source
+   - Directories → `read_note(notePath: "<dir>/_dir.md", depth: 1)`
+2. **Never read `.binote/` files directly** with the Read tool — always use `read_note` so reads are logged
+3. If a binote note is empty, fall back to reading source directly
 ```
 
 After writing, confirm to the user what was added and where.

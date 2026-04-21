@@ -109,36 +109,113 @@ const emptyNoteHint = (notePath: string): string => {
 const renderNote = (text: string, path: string, from?: number, to?: number): string =>
   text.length === 0 ? emptyNoteHint(path) : sliceWindow(text, path, from, to);
 
+/** Try exact notePath, fall back to resolveLinkDetailed if not found. */
+const resolveNotePath = async (
+  config: ReturnType<typeof makeConfig>,
+  input: string,
+): Promise<{ path: string; strategy: string } | null> => {
+  if (await noteExists(config, input)) return { path: input, strategy: "exact" };
+  const notes = await scanExistingNotes(config);
+  const detail = resolveLinkDetailed(input, notes);
+  return detail.resolved ? { path: detail.resolved, strategy: detail.strategy } : null;
+};
+
+/** Recursive graph node: expanded when visited, id-ref when already seen. */
+type NoteNode = {
+  readonly id: string;
+  readonly content: string;
+  readonly linked: readonly (NoteNode | string)[];
+  readonly backlinked: readonly (NoteNode | string)[];
+  readonly dangling: readonly string[];
+};
+
+/** Recursive unfold of the note graph with cycle detection via visited set. */
+const expandNote = async (
+  config: ReturnType<typeof makeConfig>,
+  index: Awaited<ReturnType<typeof getOrBuildIndex>>,
+  id: string,
+  depth: number,
+  visited: Set<string>,
+): Promise<NoteNode | string> => {
+  if (visited.has(id)) return id; // cycle → id ref
+  visited.add(id);
+
+  const raw = await readNote(config, id);
+  const content = raw ?? `(not found: ${id})`;
+  if (depth <= 0) return { id, content, linked: [], backlinked: [], dangling: [] };
+
+  const refs = index.links[id] ?? [];
+  const backrefs = index.backlinks[id] ?? [];
+  const dangling = refs.filter(r => r.resolved === null).map(r => r.raw);
+
+  const forwardIds = [...new Set(refs.filter(r => r.resolved !== null).map(r => r.resolved!))];
+  const backIds = [...new Set(backrefs.map(r => r.from))];
+
+  const [linked, backlinked] = await Promise.all([
+    Promise.all(forwardIds.map(fid => expandNote(config, index, fid, depth - 1, visited))),
+    Promise.all(backIds.map(bid => expandNote(config, index, bid, depth - 1, visited))),
+  ]);
+
+  return { id, content, linked, backlinked, dangling };
+};
+
 server.registerTool(
   "read_note",
   {
-    description: "Read one or more Binote notes. Path is relative to .binote/ (e.g. 'src/index.ts.md'). Use notePaths for batch reads, from/to for line ranges.",
+    description: "Read one or more Binote notes. Accepts exact paths (e.g. 'src/index.ts.md') or [[link]] targets (e.g. 'helpers') — auto-resolves with fuzzy fallback. Set depth=1+ to recursively expand linked and backlinked notes. Already-visited nodes appear as id strings (cycle-safe).",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       notePath: z.string().optional().describe("Single note path; ignored if notePaths is provided"),
-      notePaths: z.array(z.string()).optional().describe("Batch read; returns {[path]: content|null}"),
-      from: z.number().int().positive().optional().describe("1-indexed start line (inclusive)"),
-      to: z.number().int().positive().optional().describe("1-indexed end line (inclusive)"),
+      notePaths: z.array(z.string()).optional().describe("Batch read — shares visited set across all roots"),
+      from: z.number().int().positive().optional().describe("1-indexed start line (inclusive, depth=0 only)"),
+      to: z.number().int().positive().optional().describe("1-indexed end line (inclusive, depth=0 only)"),
+      depth: z.number().int().min(0).max(3).optional().describe("0 = note only (default). 1+ = recursively expand linked and backlinked notes. Visited nodes become id refs."),
     },
   },
-  async ({ projectRoot, notePath, notePaths, from, to }) => {
+  async ({ projectRoot, notePath, notePaths, from, to, depth }) => {
     const config = makeConfig(projectRoot);
     const logFile = sessionLogPath(config.sessionsDir);
     let logError: string | null = null;
+    const d = depth ?? 0;
 
     const logRead = (path: string, content: string) =>
       appendLog(logFile, JSON.stringify({ ts: new Date().toISOString(), notePath: path, chars: content.length, content }) + "\n")
         .catch(e => { logError = String(e); });
 
-    if (notePaths && notePaths.length > 0) {
-      const entries = await Promise.all(
-        notePaths.map(async (p): Promise<readonly [string, string | null]> => {
-          const c = await readNote(config, p);
-          if (c !== null) await logRead(p, c);
-          return [p, c === null ? null : renderNote(c, p, from, to)];
-        })
+    // resolve input → real notePath (exact or fuzzy)
+    const resolve = async (p: string) => resolveNotePath(config, p);
+
+    // depth=0: plain text (backward compat)
+    const readFlat = async (p: string) => {
+      const r = await resolve(p);
+      if (!r) return null;
+      const c = await readNote(config, r.path);
+      if (c !== null) await logRead(r.path, c);
+      return c === null ? null : renderNote(c, r.path, from, to);
+    };
+
+    // depth>=1: recursive graph expansion
+    const readGraph = async (paths: string[]) => {
+      const resolved = await Promise.all(paths.map(resolve));
+      const realPaths = resolved.filter(Boolean).map(r => r!.path);
+      const index = await getOrBuildIndex(config);
+      const visited = new Set<string>();
+      return Promise.all(
+        realPaths.map(p => expandNote(config, index, p, d, visited))
       );
-      const result = JSON.stringify(Object.fromEntries(entries), null, 2);
+    };
+
+    if (notePaths && notePaths.length > 0) {
+      if (d === 0) {
+        const entries = await Promise.all(
+          notePaths.map(async (p): Promise<readonly [string, string | null]> => [p, await readFlat(p)])
+        );
+        const result = JSON.stringify(Object.fromEntries(entries), null, 2);
+        const text = logError ? `${result}\n[log error: ${logError}]` : result;
+        return { content: [{ type: "text" as const, text }] };
+      }
+      const nodes = await readGraph(notePaths);
+      const result = JSON.stringify(nodes, null, 2);
       const text = logError ? `${result}\n[log error: ${logError}]` : result;
       return { content: [{ type: "text" as const, text }] };
     }
@@ -146,13 +223,19 @@ server.registerTool(
     if (!notePath) {
       return { content: [{ type: "text" as const, text: "Provide notePath or notePaths" }], isError: true };
     }
-    const content = await readNote(config, notePath);
-    if (content === null) {
-      return { content: [{ type: "text" as const, text: `Note not found: ${notePath}` }], isError: true };
+
+    if (d === 0) {
+      const flat = await readFlat(notePath);
+      if (flat === null) {
+        return { content: [{ type: "text" as const, text: `Note not found: ${notePath}` }], isError: true };
+      }
+      const text = logError ? `${flat}\n[log error: ${logError}]` : flat;
+      return { content: [{ type: "text" as const, text }] };
     }
-    await logRead(notePath, content);
-    const rendered = renderNote(content, notePath, from, to);
-    const text = logError ? `${rendered}\n[log error: ${logError}]` : rendered;
+
+    const [node] = await readGraph([notePath]);
+    const result = JSON.stringify(node, null, 2);
+    const text = logError ? `${result}\n[log error: ${logError}]` : result;
     return { content: [{ type: "text" as const, text }] };
   }
 );
@@ -186,49 +269,12 @@ server.registerTool(
   }
 );
 
-// ── query_links ───────────────────────────────────────────────────────
-
-server.registerTool(
-  "query_links",
-  {
-    description: "Get forward links and backlinks for a note. Returns flat lists plus detailed line-aware variants and any dangling [[X]] from this note.",
-    inputSchema: {
-      projectRoot: z.string().describe("Absolute path to the project root"),
-      notePath: z.string().describe("Path to the note relative to .binote/"),
-    },
-  },
-  async ({ projectRoot, notePath }) => {
-    const config = makeConfig(projectRoot);
-    const index = await getOrBuildIndex(config);
-
-    const forwardDetails = index.links[notePath] ?? [];
-    const backlinkDetails = index.backlinks[notePath] ?? [];
-    const danglingFromHere = forwardDetails.filter((r) => r.resolved === null);
-
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify({
-            notePath,
-            forward: index.forward[notePath] ?? [],
-            backlinks: index.reverse[notePath] ?? [],
-            forwardDetails,
-            backlinkDetails,
-            dangling: danglingFromHere,
-          }, null, 2),
-        },
-      ],
-    };
-  }
-);
-
 // ── search ────────────────────────────────────────────────────────────
 
 server.registerTool(
   "search",
   {
-    description: "Full-text search across all Binote notes. Hits include resolved [[link]] targets on the matched line — use those instead of a follow-up query_links.",
+    description: "Full-text search across all Binote notes. Hits include resolved [[link]] targets on the matched line.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       query: z.string().describe("Search query (plain text or regex)"),
@@ -246,37 +292,6 @@ server.registerTool(
         {
           type: "text" as const,
           text: JSON.stringify({ query, totalHits: hits.length, hits }, null, 2),
-        },
-      ],
-    };
-  }
-);
-
-// ── resolve_link ──────────────────────────────────────────────────────
-
-server.registerTool(
-  "resolve_link",
-  {
-    description: "Resolve a [[target]] string to a concrete note path. Returns candidates if ambiguous. Falls back to substring matching for typos. Use before chasing a link whose destination isn't obvious.",
-    inputSchema: {
-      projectRoot: z.string().describe("Absolute path to the project root"),
-      target: z.string().describe("The text inside [[...]], e.g. 'multiset-not-diff'"),
-    },
-  },
-  async ({ projectRoot, target }) => {
-    const config = makeConfig(projectRoot);
-    const notes = await scanExistingNotes(config);
-    const detail = resolveLinkDetailed(target, notes);
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify({
-            target,
-            resolved: detail.resolved,
-            candidates: detail.candidates,
-            strategy: detail.strategy,
-          }, null, 2),
         },
       ],
     };

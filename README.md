@@ -35,7 +35,7 @@ Notes use `[[bidirectional links]]` — link to any file or note by path:
 Entry point. Orchestrates [[src/utils/helpers.ts]] and [[_notes/architecture.md]].
 ```
 
-Query links to traverse the graph in both directions.
+Use `depth=1` in `read_note` to expand all linked and backlinked notes in one call.
 
 ## Install
 
@@ -89,7 +89,6 @@ Add to your MCP config (`.mcp.json`, `claude_desktop_config.json`, etc.):
 | Command | Description |
 |---------|-------------|
 | `/binote:mode` | Activate binote-first mode — reads `.binote/` notes before source files. When you `@file`, the binote note is read first. |
-| `/binote:gen` | Generate note content by reading source files. Fills empty skeletons with summaries and `[[links]]`. |
 | `/binote:save` | Save current session's learnings (design decisions, discoveries) into `.binote/` notes. |
 | `/binote:rule` | Emit a CLAUDE.md snippet for always-on binote-first behavior. |
 
@@ -100,23 +99,25 @@ Slash commands require plugin install. See Setup above.
 | Tool | Description |
 |------|-------------|
 | `init` | Scan project and generate `.binote/` skeleton |
-| `read_note` | Read a note by path |
+| `read_note` | Read notes — accepts exact paths or `[[link]]` targets. `depth=1+` recursively expands linked and backlinked notes (cycle-safe) |
 | `write_note` | Create or update a note with `[[links]]` |
-| `query_links` | Get forward links and backlinks for a note |
 | `search` | Full-text search across all notes |
 | `sync` | Detect file renames/deletes, mark orphaned notes |
+| `rebuild_index` | Rebuild `_index.json` link graph from all notes |
 | `list_notes` | List all notes in `.binote/` |
 
 ## CLI
 
 ```bash
-binote init   [projectRoot]                  # Initialize .binote/
-binote list   [projectRoot]                  # List all notes
-binote read   <notePath> [projectRoot]       # Read a note
-binote write  <notePath> <content> [root]    # Write a note
-binote links  <notePath> [projectRoot]       # Query forward/backlinks
-binote search <query> [projectRoot]          # Full-text search
-binote sync   [projectRoot]                  # Detect changes, mark orphans
+binote init     [projectRoot]                  # Initialize .binote/
+binote list     [projectRoot]                  # List all notes
+binote read     <notePath> [projectRoot]       # Read a note (fuzzy resolve)
+binote write    <notePath> <content> [root]    # Write a note
+binote links    <notePath> [projectRoot]       # Query forward/backlinks
+binote search   <query> [projectRoot]          # Full-text search
+binote resolve  <target> [projectRoot]         # Resolve a [[link]] target
+binote dangling [projectRoot]                  # List all unresolved [[links]]
+binote sync     [projectRoot]                  # Detect changes, mark orphans
 ```
 
 No arguments starts the MCP server (stdio transport).
@@ -124,11 +125,18 @@ No arguments starts the MCP server (stdio transport).
 ## Workflow
 
 1. `init` — scaffold `.binote/` with empty notes mirroring your source files
-2. `/binote:gen` — fill notes with summaries, exports, and `[[links]]`
-3. `/binote:mode` — activate binote-first mode in any conversation
-4. Work normally — Claude reads binote notes before source files for faster context
-5. `/binote:save` — capture session learnings back into notes
-6. `sync` — after refactoring, detect structural changes and mark orphans
+2. `/binote:mode` — activate binote-first mode in any conversation
+3. Work normally — Claude reads binote notes before source files for faster context
+4. `/binote:save` — capture session learnings back into notes
+5. `sync` — after refactoring, detect structural changes and mark orphans
+
+## Git
+
+Add `_index.json` to your `.gitignore` — it's a derived cache rebuilt automatically on demand:
+
+```gitignore
+.binote/_index.json
+```
 
 ## Design
 
