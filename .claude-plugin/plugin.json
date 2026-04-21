@@ -1,7 +1,7 @@
 {
   "name": "binote",
   "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .binote/ with [[wiki-style links]]",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "author": {
     "name": "Guxi11"
   },
