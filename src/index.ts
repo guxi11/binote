@@ -175,12 +175,7 @@ server.registerTool(
   async ({ projectRoot, notePath, notePaths, from, to, depth }) => {
     const config = makeConfig(projectRoot);
     const logFile = sessionLogPath(config.sessionsDir);
-    let logError: string | null = null;
     const d = depth ?? 0;
-
-    const logRead = (path: string, content: string) =>
-      appendLog(logFile, JSON.stringify({ ts: new Date().toISOString(), notePath: path, chars: content.length, content }) + "\n")
-        .catch(e => { logError = String(e); });
 
     // resolve input → real notePath (exact or fuzzy)
     const resolve = async (p: string) => resolveNotePath(config, p);
@@ -190,7 +185,6 @@ server.registerTool(
       const r = await resolve(p);
       if (!r) return null;
       const c = await readNote(config, r.path);
-      if (c !== null) await logRead(r.path, c);
       return c === null ? null : renderNote(c, r.path, from, to);
     };
 
@@ -205,38 +199,39 @@ server.registerTool(
       );
     };
 
-    if (notePaths && notePaths.length > 0) {
+    // build result text
+    const makeResult = async (): Promise<{ text: string; isError?: boolean }> => {
+      if (notePaths && notePaths.length > 0) {
+        if (d === 0) {
+          const entries = await Promise.all(
+            notePaths.map(async (p): Promise<readonly [string, string | null]> => [p, await readFlat(p)])
+          );
+          return { text: JSON.stringify(Object.fromEntries(entries), null, 2) };
+        }
+        return { text: JSON.stringify(await readGraph(notePaths), null, 2) };
+      }
+
+      if (!notePath) return { text: "Provide notePath or notePaths", isError: true };
+
       if (d === 0) {
-        const entries = await Promise.all(
-          notePaths.map(async (p): Promise<readonly [string, string | null]> => [p, await readFlat(p)])
-        );
-        const result = JSON.stringify(Object.fromEntries(entries), null, 2);
-        const text = logError ? `${result}\n[log error: ${logError}]` : result;
-        return { content: [{ type: "text" as const, text }] };
+        const flat = await readFlat(notePath);
+        return flat === null
+          ? { text: `Note not found: ${notePath}`, isError: true }
+          : { text: flat };
       }
-      const nodes = await readGraph(notePaths);
-      const result = JSON.stringify(nodes, null, 2);
-      const text = logError ? `${result}\n[log error: ${logError}]` : result;
-      return { content: [{ type: "text" as const, text }] };
-    }
 
-    if (!notePath) {
-      return { content: [{ type: "text" as const, text: "Provide notePath or notePaths" }], isError: true };
-    }
+      const [node] = await readGraph([notePath]);
+      return { text: JSON.stringify(node, null, 2) };
+    };
 
-    if (d === 0) {
-      const flat = await readFlat(notePath);
-      if (flat === null) {
-        return { content: [{ type: "text" as const, text: `Note not found: ${notePath}` }], isError: true };
-      }
-      const text = logError ? `${flat}\n[log error: ${logError}]` : flat;
-      return { content: [{ type: "text" as const, text }] };
-    }
+    const { text, isError } = await makeResult();
 
-    const [node] = await readGraph([notePath]);
-    const result = JSON.stringify(node, null, 2);
-    const text = logError ? `${result}\n[log error: ${logError}]` : result;
-    return { content: [{ type: "text" as const, text }] };
+    // log exactly what the LLM receives
+    const input = notePaths && notePaths.length > 0 ? notePaths : [notePath ?? ""];
+    await appendLog(logFile, JSON.stringify({ ts: new Date().toISOString(), input, depth: d, chars: text.length, result: text }) + "\n")
+      .catch(() => {});
+
+    return { content: [{ type: "text" as const, text }], ...(isError ? { isError } : {}) };
   }
 );
 
