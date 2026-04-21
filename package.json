@@ -20,7 +20,7 @@
     "changes": "changenotes list",
     "changes:preview": "changenotes preview",
     "version": "npm run sync-version && changenotes release $npm_package_version && git add .claude-plugin CHANGELOG.md .changes",
-    "release": "npm version patch && git push --follow-tags && npm publish"
+    "release": "npm version ${npm_config_ver:-patch} && git push --follow-tags && npm publish"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
