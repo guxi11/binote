@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, readdir, unlink, stat } from "node:fs/promises";
+import { mkdir, readFile, writeFile, appendFile, readdir, unlink, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
 
 export const ensureDir = (dirPath: string): Promise<void> =>
@@ -24,6 +24,11 @@ export const fileSize = async (path: string): Promise<number> => {
   } catch {
     return 0;
   }
+};
+
+export const appendLog = async (path: string, entry: string): Promise<void> => {
+  await ensureDir(join(path, ".."));
+  await appendFile(path, entry, "utf-8");
 };
 
 export const removeFile = async (path: string): Promise<boolean> => {

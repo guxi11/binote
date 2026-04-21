@@ -12,9 +12,12 @@ npm run build
 ## Dev Loop
 
 ```bash
+npm link               # symlink global `binote` to local build (one-time)
 npm run watch          # rebuild on change
 claude --plugin-dir .  # load plugin locally (MCP tools + slash commands)
 ```
+
+> **Why `npm link`?** The plugin's MCP server runs via `"command": "binote"`, which resolves through `$PATH`. Without linking, this may hit a stale globally-installed version instead of your local build.
 
 After editing `commands/*.md`, run `/reload-plugins` in Claude Code — no restart needed.
 

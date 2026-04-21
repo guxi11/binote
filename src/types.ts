@@ -5,6 +5,7 @@ export type BinoteConfig = {
   readonly binoteDir: string;
   readonly notesDir: string;
   readonly indexPath: string;
+  readonly sessionsDir: string;
   readonly ignore: readonly string[];
 };
 

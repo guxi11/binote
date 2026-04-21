@@ -21,6 +21,7 @@ export const makeConfig = (projectRoot: string, extraIgnore: readonly string[] =
     binoteDir,
     notesDir: join(binoteDir, "_notes"),
     indexPath: join(binoteDir, "_index.json"),
+    sessionsDir: join(binoteDir, "_sessions"),
     ignore: [...DEFAULT_IGNORE, ...extraIgnore],
   };
 };

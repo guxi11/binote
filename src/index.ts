@@ -10,8 +10,12 @@ import { readNote, writeNote, noteExists } from "./core/note-io.js";
 import { getOrBuildIndex, buildIndex, saveIndex, invalidateIndex } from "./core/link-index.js";
 import { searchNotes } from "./core/search.js";
 import { sync } from "./core/sync-engine.js";
-import { ensureDir } from "./util/fs-helpers.js";
+import { join } from "node:path";
+import { ensureDir, appendLog } from "./util/fs-helpers.js";
 import { pkg } from "./util/pkg.js";
+
+const dateStamp = () => new Date().toISOString().slice(0, 10);
+const sessionLogPath = (sessionsDir: string) => join(sessionsDir, `${dateStamp()}.jsonl`);
 
 const server = new McpServer({
   name: pkg.name,
@@ -119,15 +123,24 @@ server.registerTool(
   },
   async ({ projectRoot, notePath, notePaths, from, to }) => {
     const config = makeConfig(projectRoot);
+    const logFile = sessionLogPath(config.sessionsDir);
+    let logError: string | null = null;
+
+    const logRead = (path: string, content: string) =>
+      appendLog(logFile, JSON.stringify({ ts: new Date().toISOString(), notePath: path, chars: content.length, content }) + "\n")
+        .catch(e => { logError = String(e); });
 
     if (notePaths && notePaths.length > 0) {
       const entries = await Promise.all(
         notePaths.map(async (p): Promise<readonly [string, string | null]> => {
           const c = await readNote(config, p);
+          if (c !== null) await logRead(p, c);
           return [p, c === null ? null : renderNote(c, p, from, to)];
         })
       );
-      return { content: [{ type: "text" as const, text: JSON.stringify(Object.fromEntries(entries), null, 2) }] };
+      const result = JSON.stringify(Object.fromEntries(entries), null, 2);
+      const text = logError ? `${result}\n[log error: ${logError}]` : result;
+      return { content: [{ type: "text" as const, text }] };
     }
 
     if (!notePath) {
@@ -137,7 +150,10 @@ server.registerTool(
     if (content === null) {
       return { content: [{ type: "text" as const, text: `Note not found: ${notePath}` }], isError: true };
     }
-    return { content: [{ type: "text" as const, text: renderNote(content, notePath, from, to) }] };
+    await logRead(notePath, content);
+    const rendered = renderNote(content, notePath, from, to);
+    const text = logError ? `${rendered}\n[log error: ${logError}]` : rendered;
+    return { content: [{ type: "text" as const, text }] };
   }
 );
 
