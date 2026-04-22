@@ -14,7 +14,7 @@
         "url": "https://github.com/Guxi11/binote.git"
       },
       "description": "Bidirectional-linked project memory for AI — mirrors your codebase into .binote/ with [[wiki-style links]]",
-      "version": "0.3.1",
+      "version": "0.3.2",
       "category": "developer-tools",
       "tags": [
         "mcp",
