@@ -228,7 +228,8 @@ server.registerTool(
 
     // log exactly what the LLM receives
     const input = notePaths && notePaths.length > 0 ? notePaths : [notePath ?? ""];
-    await appendLog(logFile, JSON.stringify({ ts: new Date().toISOString(), input, depth: d, chars: text.length, result: text }) + "\n")
+    const parsed = (() => { try { return JSON.parse(text); } catch { return text; } })();
+    await appendLog(logFile, JSON.stringify({ ts: new Date().toISOString(), input, depth: d, chars: text.length, result: parsed }, null, 2) + "\n")
       .catch(() => {});
 
     return { content: [{ type: "text" as const, text }], ...(isError ? { isError } : {}) };
