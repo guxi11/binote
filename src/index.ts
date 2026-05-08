@@ -10,9 +10,13 @@ import { readNote, writeNote, noteExists } from "./core/note-io.js";
 import { getOrBuildIndex, buildIndex, saveIndex, invalidateIndex } from "./core/link-index.js";
 import { searchNotes } from "./core/search.js";
 import { sync } from "./core/sync-engine.js";
+import { stalenessFor, markVerified } from "./core/meta.js";
+import { parseFrontmatter } from "./core/frontmatter.js";
+import { applyIgnore, PRIVATE_PATHS } from "./core/gitignore.js";
 import { join } from "node:path";
 import { ensureDir, appendLog } from "./util/fs-helpers.js";
 import { pkg } from "./util/pkg.js";
+import type { Staleness } from "./types.js";
 
 const dateStamp = () => new Date().toISOString().slice(0, 10);
 const sessionLogPath = (sessionsDir: string) => join(sessionsDir, `${dateStamp()}.jsonl`);
@@ -106,8 +110,13 @@ const emptyNoteHint = (notePath: string): string => {
     : `(empty note: ${notePath})`;
 };
 
-const renderNote = (text: string, path: string, from?: number, to?: number): string =>
-  text.length === 0 ? emptyNoteHint(path) : sliceWindow(text, path, from, to);
+/** Strip frontmatter, then either show body or fall back to emptyNoteHint. */
+const renderNote = (text: string, path: string, from?: number, to?: number): string => {
+  const { body } = parseFrontmatter(text);
+  return body.trim().length === 0
+    ? emptyNoteHint(path)
+    : sliceWindow(body, path, from, to);
+};
 
 /** Try exact notePath, fall back to resolveLinkDetailed if not found. */
 const resolveNotePath = async (
@@ -127,82 +136,144 @@ type NoteNode = {
   readonly linked: readonly (NoteNode | string)[];
   readonly backlinked: readonly (NoteNode | string)[];
   readonly dangling: readonly string[];
+  staleness?: Staleness; // attached post-expansion; omitted when 'fresh' to save tokens
 };
 
-/** Recursive unfold of the note graph with cycle detection via visited set. */
+/**
+ * Recursive unfold of the note graph with cycle detection.
+ * `fDepth` controls forward [[link]] expansion; `bDepth` controls backlink expansion.
+ * Backlink branches do NOT continue forward chains (their fDepth is forced to 0)
+ * — backlinks are noisy reverse samples, not transitive evidence.
+ */
 const expandNote = async (
   config: ReturnType<typeof makeConfig>,
   index: Awaited<ReturnType<typeof getOrBuildIndex>>,
   id: string,
-  depth: number,
+  fDepth: number,
+  bDepth: number,
   visited: Set<string>,
 ): Promise<NoteNode | string> => {
   if (visited.has(id)) return id; // cycle → id ref
   visited.add(id);
 
   const raw = await readNote(config, id);
-  const content = raw ?? `(not found: ${id})`;
-  if (depth <= 0) return { id, content, linked: [], backlinked: [], dangling: [] };
+  const content = raw === null
+    ? `(not found: ${id})`
+    : (() => {
+        const { body } = parseFrontmatter(raw);
+        return body.trim().length === 0 ? emptyNoteHint(id) : body;
+      })();
+  if (fDepth <= 0 && bDepth <= 0) return { id, content, linked: [], backlinked: [], dangling: [] };
 
   const refs = index.links[id] ?? [];
   const backrefs = index.backlinks[id] ?? [];
   const dangling = refs.filter(r => r.resolved === null).map(r => r.raw);
 
-  const forwardIds = [...new Set(refs.filter(r => r.resolved !== null).map(r => r.resolved!))];
-  const backIds = [...new Set(backrefs.map(r => r.from))];
+  const forwardIds = fDepth > 0
+    ? [...new Set(refs.filter(r => r.resolved !== null).map(r => r.resolved!))]
+    : [];
+  const backIds = bDepth > 0
+    ? [...new Set(backrefs.map(r => r.from))]
+    : [];
 
   const [linked, backlinked] = await Promise.all([
-    Promise.all(forwardIds.map(fid => expandNote(config, index, fid, depth - 1, visited))),
-    Promise.all(backIds.map(bid => expandNote(config, index, bid, depth - 1, visited))),
+    Promise.all(forwardIds.map(fid => expandNote(config, index, fid, fDepth - 1, bDepth, visited))),
+    // backlink neighbours: include their content (fDepth=0 forces no further chain)
+    Promise.all(backIds.map(bid => expandNote(config, index, bid, 0, bDepth - 1, visited))),
   ]);
 
   return { id, content, linked, backlinked, dangling };
 };
 
+/** Walk a NoteNode tree and attach staleness from a precomputed map. Mutates in place. */
+const attachStaleness = (
+  node: NoteNode | string,
+  map: Readonly<Record<string, Staleness>>,
+): void => {
+  if (typeof node === "string") return;
+  const s = map[node.id];
+  if (s && s.level !== "fresh") node.staleness = s;
+  for (const c of node.linked) attachStaleness(c, map);
+  for (const c of node.backlinked) attachStaleness(c, map);
+};
+
+/** Collect all real (non-id-ref) note ids in a graph. */
+const collectIds = (node: NoteNode | string, out: Set<string>): void => {
+  if (typeof node === "string") { out.add(node); return; }
+  out.add(node.id);
+  for (const c of node.linked) collectIds(c, out);
+  for (const c of node.backlinked) collectIds(c, out);
+};
+
 server.registerTool(
   "read_note",
   {
-    description: "Read one or more Binote notes. Accepts exact paths (e.g. 'src/index.ts.md') or [[link]] targets (e.g. 'helpers') — auto-resolves with fuzzy fallback. Set depth=1+ to recursively expand linked and backlinked notes. Already-visited nodes appear as id strings (cycle-safe).",
+    description: [
+      "Read one or more Binote notes via the link graph. Auto-resolves [[link]] targets with fuzzy fallback.",
+      "",
+      "Pick depths intentionally:",
+      "- forwardDepth=0 → known file, want a slice, batch preview",
+      "- forwardDepth=1 → DEFAULT recommended for entering a file/dir (gets [[links]])",
+      "- forwardDepth=2+ → rare; tracing a causal chain (\"why does this invariant exist?\")",
+      "- backDepth=0 → DEFAULT (backlinks are noisy reverse samples)",
+      "- backDepth=1 → only when answering \"who depends on / references me?\"",
+      "",
+      "Each node carries a `staleness` field when warning/stale (source mtime drifted from note mtime). Visited nodes become id strings (cycle-safe).",
+    ].join("\n"),
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       notePath: z.string().optional().describe("Single note path; ignored if notePaths is provided"),
       notePaths: z.array(z.string()).optional().describe("Batch read — shares visited set across all roots"),
-      from: z.number().int().positive().optional().describe("1-indexed start line (inclusive, depth=0 only)"),
-      to: z.number().int().positive().optional().describe("1-indexed end line (inclusive, depth=0 only)"),
-      depth: z.number().int().min(0).max(3).optional().describe("0 = note only (default). 1+ = recursively expand linked and backlinked notes. Visited nodes become id refs."),
+      from: z.number().int().positive().optional().describe("1-indexed start line (inclusive, flat reads only)"),
+      to: z.number().int().positive().optional().describe("1-indexed end line (inclusive, flat reads only)"),
+      forwardDepth: z.number().int().min(0).max(3).optional().describe("Forward [[link]] expansion. 0 = note only. 1 = recommended default for new files. 2+ rare."),
+      backDepth: z.number().int().min(0).max(1).optional().describe("Backlink expansion. 0 = ignore (default). 1 = include incoming refs ('who depends on me')."),
+      depth: z.number().int().min(0).max(3).optional().describe("DEPRECATED legacy alias. Maps to forwardDepth (backDepth stays 0). Prefer the explicit params."),
     },
   },
-  async ({ projectRoot, notePath, notePaths, from, to, depth }) => {
+  async ({ projectRoot, notePath, notePaths, from, to, forwardDepth, backDepth, depth }) => {
     const config = makeConfig(projectRoot);
     const logFile = sessionLogPath(config.sessionsDir);
-    const d = depth ?? 0;
+    const fDepth = forwardDepth ?? depth ?? 0;
+    const bDepth = backDepth ?? 0;
+    const isFlat = fDepth === 0 && bDepth === 0;
 
-    // resolve input → real notePath (exact or fuzzy)
     const resolve = async (p: string) => resolveNotePath(config, p);
 
-    // depth=0: plain text (backward compat)
-    const readFlat = async (p: string) => {
+    // Flat path: render plain text, optionally prepend a staleness banner.
+    const readFlat = async (p: string): Promise<string | null> => {
       const r = await resolve(p);
       if (!r) return null;
       const c = await readNote(config, r.path);
-      return c === null ? null : renderNote(c, r.path, from, to);
+      if (c === null) return null;
+      const rendered = renderNote(c, r.path, from, to);
+      const stale = (await stalenessFor(config, [r.path]))[r.path];
+      if (stale && (stale.level === "warning" || stale.level === "stale")) {
+        return `<!-- staleness: ${stale.hint} -->\n${rendered}`;
+      }
+      return rendered;
     };
 
-    // depth>=1: recursive graph expansion
+    // Graph path: expand, then attach staleness in one batch.
     const readGraph = async (paths: string[]) => {
       const resolved = await Promise.all(paths.map(resolve));
       const realPaths = resolved.filter(Boolean).map(r => r!.path);
       const index = await getOrBuildIndex(config);
       const visited = new Set<string>();
-      return Promise.all(
-        realPaths.map(p => expandNote(config, index, p, d, visited))
+      const nodes = await Promise.all(
+        realPaths.map(p => expandNote(config, index, p, fDepth, bDepth, visited))
       );
+      const ids = new Set<string>();
+      for (const n of nodes) collectIds(n, ids);
+      const stalenessMap = await stalenessFor(config, [...ids]);
+      for (const n of nodes) attachStaleness(n, stalenessMap);
+      return nodes;
     };
 
-    // build result text
-    const makeResult = async (): Promise<{ text: string; isError?: boolean }> => {
+    type Built = { text: string; isError?: boolean };
+    const makeResult = async (): Promise<Built> => {
       if (notePaths && notePaths.length > 0) {
-        if (d === 0) {
+        if (isFlat) {
           const entries = await Promise.all(
             notePaths.map(async (p): Promise<readonly [string, string | null]> => [p, await readFlat(p)])
           );
@@ -213,7 +284,7 @@ server.registerTool(
 
       if (!notePath) return { text: "Provide notePath or notePaths", isError: true };
 
-      if (d === 0) {
+      if (isFlat) {
         const flat = await readFlat(notePath);
         return flat === null
           ? { text: `Note not found: ${notePath}`, isError: true }
@@ -226,11 +297,13 @@ server.registerTool(
 
     const { text, isError } = await makeResult();
 
-    // log exactly what the LLM receives
+    // Log exactly what the LLM receives.
     const input = notePaths && notePaths.length > 0 ? notePaths : [notePath ?? ""];
     const parsed = (() => { try { return JSON.parse(text); } catch { return text; } })();
-    await appendLog(logFile, JSON.stringify({ ts: new Date().toISOString(), input, depth: d, chars: text.length, result: parsed }, null, 2) + "\n")
-      .catch(() => {});
+    await appendLog(
+      logFile,
+      JSON.stringify({ ts: new Date().toISOString(), input, forwardDepth: fDepth, backDepth: bDepth, chars: text.length, result: parsed }, null, 2) + "\n",
+    ).catch(() => {});
 
     return { content: [{ type: "text" as const, text }], ...(isError ? { isError } : {}) };
   }
@@ -350,6 +423,119 @@ server.registerTool(
             links: linkCount,
             dangling: danglingCount,
           }, null, 2),
+        },
+      ],
+    };
+  }
+);
+
+// ── mark_verified ─────────────────────────────────────────────────────
+
+server.registerTool(
+  "mark_verified",
+  {
+    description: "Stamp a note as just-verified by writing `lastVerified: <ISO now>` into its frontmatter. Called by /binote:verify subagents after producing an audit report. Frontmatter changes do not affect the [[link]] index.",
+    inputSchema: {
+      projectRoot: z.string().describe("Absolute path to the project root"),
+      notePath: z.string().describe("Note path relative to .binote/, e.g. 'src/index.ts.md'"),
+    },
+  },
+  async ({ projectRoot, notePath }) => {
+    const config = makeConfig(projectRoot);
+
+    const resolved = await resolveNotePath(config, notePath);
+    if (!resolved) {
+      return { content: [{ type: "text" as const, text: `Note not found: ${notePath}` }], isError: true };
+    }
+    await markVerified(config, resolved.path);
+
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify({ status: "verified", notePath: resolved.path, at: new Date().toISOString() }, null, 2) }],
+    };
+  }
+);
+
+// ── audit_status ──────────────────────────────────────────────────────
+
+server.registerTool(
+  "audit_status",
+  {
+    description: "Report which notes are stale or unverified, sorted by drift severity. Used by /binote:verify to pick targets. Stats and frontmatter are read on demand — no persistent meta state.",
+    inputSchema: {
+      projectRoot: z.string().describe("Absolute path to the project root"),
+      level: z.enum(["fresh", "warning", "stale", "unverified"]).optional().describe("Filter by staleness level. Omit to return all (sorted)."),
+      limit: z.number().int().positive().optional().describe("Max entries to return (default: 20)"),
+    },
+  },
+  async ({ projectRoot, level, limit }) => {
+    const config = makeConfig(projectRoot);
+    const cap = limit ?? 20;
+
+    const allNotes = await scanExistingNotes(config);
+    const stalenessMap = await stalenessFor(config, allNotes);
+
+    type Row = {
+      readonly notePath: string;
+      readonly level: Staleness["level"];
+      readonly daysSourceAheadOfNote: number | null;
+      readonly daysSinceVerified: number | null;
+      readonly hint: string;
+    };
+
+    const rows: Row[] = Object.entries(stalenessMap).map(([notePath, s]) => ({
+      notePath,
+      level: s.level,
+      daysSourceAheadOfNote: s.daysSourceAheadOfNote,
+      daysSinceVerified: s.daysSinceVerified,
+      hint: s.hint,
+    }));
+
+    const filtered = level ? rows.filter(r => r.level === level) : rows;
+
+    // Sort: stale > warning > unverified > fresh; within group, larger drift first.
+    const levelRank = { stale: 3, warning: 2, unverified: 1, fresh: 0 } as const;
+    const sorted = [...filtered].sort((a, b) => {
+      const lr = levelRank[b.level] - levelRank[a.level];
+      if (lr !== 0) return lr;
+      const da = a.daysSourceAheadOfNote ?? -1;
+      const db = b.daysSourceAheadOfNote ?? -1;
+      return db - da;
+    });
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify({
+            total: filtered.length,
+            shown: Math.min(cap, sorted.length),
+            notes: sorted.slice(0, cap),
+          }, null, 2),
+        },
+      ],
+    };
+  }
+);
+
+// ── ignore ────────────────────────────────────────────────────────────
+
+server.registerTool(
+  "ignore",
+  {
+    description: `Append binote's private artifact paths to <projectRoot>/.gitignore. Idempotent — already-present entries are skipped. Adds: ${PRIVATE_PATHS.join(", ")}. Notes (_dir.md, _notes/, file mirrors) stay tracked because they are the collaborative truth.`,
+    inputSchema: {
+      projectRoot: z.string().describe("Absolute path to the project root"),
+    },
+  },
+  async ({ projectRoot }) => {
+    const config = makeConfig(projectRoot);
+    const result = await applyIgnore(config);
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(result, null, 2),
         },
       ],
     };

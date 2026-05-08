@@ -27,7 +27,11 @@ const markOrphaned = async (config: BinoteConfig, notePath: string): Promise<voi
   );
 };
 
-/** Full sync: detect orphans, mark them, rebuild index */
+/** Full sync: detect orphans, mark them, rebuild index.
+ *  Note: staleness for orphans is computed on demand from `notePathToProjectPath`
+ *  + `stat()`; when the source no longer exists, sourceMtime resolves to null
+ *  and `computeStaleness` falls into the "no source / never verified" branch.
+ */
 export const sync = async (config: BinoteConfig, dryRun = false): Promise<SyncResult> => {
   const projectFiles = await scanProjectFiles(config);
   const noteFiles = await scanExistingNotes(config);

@@ -6,6 +6,7 @@ import { readNote, writeNote, noteExists } from "./core/note-io.js";
 import { getOrBuildIndex, buildIndex, saveIndex, invalidateIndex } from "./core/link-index.js";
 import { searchNotes } from "./core/search.js";
 import { sync } from "./core/sync-engine.js";
+import { applyIgnore, PRIVATE_PATHS } from "./core/gitignore.js";
 import { ensureDir } from "./util/fs-helpers.js";
 
 const log = (obj: unknown) => console.log(JSON.stringify(obj, null, 2));
@@ -239,6 +240,13 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
     const result = await sync(config, boolFlag(flags, "dry-run"));
     log(result);
   },
+
+  async ignore(args) {
+    const { flags } = parseArgs(args);
+    const config = makeConfig(rootFromFlags(flags));
+    const result = await applyIgnore(config);
+    log(result);
+  },
 };
 
 const USAGE = `binote v${pkg.version} — ${pkg.description}
@@ -258,6 +266,8 @@ Commands:
   resolve  <target> [--root D]                 Resolve a [[target]] to a note path
   dangling [--root D]                          List all unresolved [[links]] across the project
   sync     [--dry-run] [--root D]              Detect file changes, mark orphans, rebuild index
+  ignore   [--root D]                          Append binote's private artifacts to .gitignore (idempotent)
+                                                 Adds: ${PRIVATE_PATHS.join(", ")}
 
 No command → start MCP server (stdio transport)
 

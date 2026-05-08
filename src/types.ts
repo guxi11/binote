@@ -5,8 +5,31 @@ export type BinoteConfig = {
   readonly binoteDir: string;
   readonly notesDir: string;
   readonly indexPath: string;
+  readonly auditDir: string;
   readonly sessionsDir: string;
   readonly ignore: readonly string[];
+};
+
+/** Inputs to staleness derivation — all looked up on demand, never persisted. */
+export type StalenessInputs = {
+  /** ISO mtime of the source file. null for _dir / _notes / standalone. */
+  readonly sourceMtime: string | null;
+  /** ISO mtime of the .binote/<path>.md file. */
+  readonly noteMtime: string;
+  /** Parsed from note frontmatter. null if never verified. */
+  readonly lastVerified: string | null;
+};
+
+export type StalenessLevel = "fresh" | "warning" | "stale" | "unverified";
+
+export type Staleness = {
+  readonly level: StalenessLevel;
+  /** Days the source was modified after the note. null when no source file. */
+  readonly daysSourceAheadOfNote: number | null;
+  /** Days since the note's `lastVerified` frontmatter timestamp. null if never verified. */
+  readonly daysSinceVerified: number | null;
+  /** Single-line human hint, e.g. "stale (source +47d)". */
+  readonly hint: string;
 };
 
 export type NoteKind = "file" | "directory" | "standalone";

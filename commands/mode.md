@@ -12,9 +12,13 @@ From this point forward in the conversation, follow these rules:
 
 When the user mentions or references a file path (e.g. `@src/core/scanner.ts`, `src/core/scanner.ts`, or just "the scanner module"):
 
-1. Call `read_note(notePath: "<path>.md", depth: 1)` first — this returns the note plus all linked and backlinked notes in one call
-2. If the path is a directory, use `read_note(notePath: "<path>/_dir.md", depth: 1)`
+1. Call `read_note(notePath: "<path>.md", forwardDepth: 1)` first — pulls the note plus its [[link]] targets in one call
+2. If the path is a directory, use `read_note(notePath: "<path>/_dir.md", forwardDepth: 1)`
 3. Only then read the actual source file if the binote note doesn't have enough context
+
+**`backDepth` is opt-in.** Set `backDepth: 1` only when answering "who depends on / references this note?". Default 0 — backlinks are noisy reverse samples and waste tokens at scale.
+
+**Heed `staleness`.** Each node may carry `staleness: { level, hint }` when source has drifted from the note. If `level` is `warning` or `stale`, treat the note as a hint, not authority — verify against source before relying on it.
 
 If the binote note is empty, read the source file directly.
 
