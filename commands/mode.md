@@ -38,8 +38,10 @@ Directory and file notes are loaded **on-demand** when the user references them 
 
 ## Reference
 
+- `_design/*.md` = **design authority** — intended architecture, module contracts, interface specs. Outranks file notes and ADRs on conflict.
 - `_dir.md` = directory overview
 - `file.ts.md` = file-level notes
-- `_notes/*.md` = standalone concept notes
+- `_notes/*.md` = standalone concept notes / ADRs
+- `_audit/<date>/*.md` = historical snapshots (non-authoritative)
 - `_index.json` = full bidirectional link graph
 - `[[target]]` = wiki-style link, resolve via `_index.json`

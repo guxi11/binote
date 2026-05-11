@@ -35,6 +35,9 @@ You are distilling this conversation's learnings into `.binote/` notes — desig
    - Merge new insights into the appropriate section (Summary, Notes, Links)
    - Preserve existing content — append, don't overwrite
    - Add `[[links]]` to related files discovered during the session
-4. If a discovery spans multiple files or is architectural, write a standalone note to `.binote/_notes/<topic>.md`
+4. Route standalone notes by kind:
+   - **Architecture, module contracts, interface design** → `.binote/_design/<topic>.md` (this is the design authority — what the system *should* be)
+   - **Decisions, tradeoffs, why-we-did-X** → `.binote/_notes/<topic>.md` (ADR-style, captures reasoning at a point in time)
+   - **Cross-file discoveries that aren't authoritative spec** → `.binote/_notes/<topic>.md`
 5. After all writes, call the `rebuild_index` MCP tool to refresh `_index.json` (do NOT manually rebuild the json — use the tool)
 6. Report what was saved: which notes updated, which created, key insights captured
