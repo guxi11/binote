@@ -24,11 +24,18 @@ myproject/
 │   ├── index.ts
 │   └── utils/helpers.ts
 ├── .binote/                    ← generated, lives in repo
+│   ├── _constitution.md        ← project-wide invariants (highest authority)
 │   ├── _dir.md                 ← root overview
-│   ├── _design/                ← design authority (intended truth)
+│   ├── _design/                ← module design authority (intended truth)
 │   │   └── architecture.md
+│   ├── _features/              ← in-flight feature workspaces
+│   │   └── 001-add-x/
+│   │       ├── _dir.md
+│   │       ├── spec.md         ← what + why
+│   │       ├── plan.md         ← how + [[link]]'d touch set
+│   │       └── tasks.md        ← ordered, parallelizable work
 │   ├── _notes/                 ← ADRs, cross-cutting decisions
-│   ├── _audit/<date>/          ← /binote:verify reports (non-authoritative)
+│   ├── _audit/<date>/          ← /binote:verify + /binote:analyze reports
 │   ├── _sessions/<date>.jsonl  ← read logs (gitignored)
 │   ├── _index.json             ← derived link graph (gitignored)
 │   └── src/
@@ -51,16 +58,39 @@ Entry point. Orchestrates [[src/utils/helpers.ts]] and follows [[_design/archite
 
 When two sources disagree, the higher rank wins — or, more usefully, the disagreement *is* the bug-report:
 
-| Rank | Kind                              | Answers                |
-| ---- | --------------------------------- | ---------------------- |
-| 1    | Source code                       | what *runs*            |
-| 1    | `_design/<topic>.md`              | what *should be*       |
-| 2    | `<dir>/_dir.md`                   | module-level overview  |
-| 3    | `<file>.md` annotation            | per-file context       |
-| 3    | `_notes/<topic>.md`               | ADRs, decisions        |
-| 4    | `_audit/<date>/*.md`              | historical snapshot    |
+| Rank | Kind                                | Answers                                |
+| ---- | ----------------------------------- | -------------------------------------- |
+| 0    | `_constitution.md`                  | project-wide invariants (bedrock)      |
+| 1    | Source code                         | what *runs*                            |
+| 1    | `_design/<topic>.md`                | module intent — what *should be*       |
+| 2    | `_features/<NNN-slug>/spec.md`      | feature-scoped intent (in-flight work) |
+| 3    | `<dir>/_dir.md`, `<file>.md`        | module / per-file context              |
+| 4    | `_notes/<topic>.md`                 | ADRs, decisions                        |
+| 5    | `_audit/<date>/*.md`                | historical snapshot                    |
 
-`_design/` and source code are **both** authority-1: code answers *"what runs"*, `_design/` answers *"what was intended"*. When they diverge, surface the gap — don't silently follow either.
+`_constitution.md` outranks everything else — it's the project's bedrock and is loaded into context whenever `/binote:mode` activates. `_design/` and source code tie at rank 1: code answers *"what runs"*, `_design/` answers *"what was intended at the module level"*. When they diverge, surface the gap — don't silently follow either.
+
+## Feature workflow
+
+Binote ships a forward workflow that lives **inside the link graph** — every spec, plan, and task is a node, every plan must `[[link]]` the files it will touch:
+
+```
+/binote:feature add ignore command     ← scaffold _features/001-add-ignore-command/
+   ↓
+edit spec.md                           ← human writes problem / goal / success criteria
+   ↓
+/binote:plan _features/001-…           ← agent derives touch set, drafts approach,
+                                          [[link]]'s every file the change will hit
+   ↓
+/binote:tasks _features/001-…          ← topological-sort into T001..T_NNN with
+                                          [P] parallel-safe markers + acceptance criteria
+   ↓
+execute (manually or via parallel subagents)
+   ↓
+/binote:save                           ← distill what was learned back into notes
+```
+
+Unlike spec-kit's isolated `.specify/` folder, the touch set in `plan.md` is a real `[[link]]` set — the plan becomes part of the binote graph and is audited by `/binote:verify` and `/binote:analyze` like any other note.
 
 ## Staleness, verification, audit
 
@@ -114,13 +144,18 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Slash commands
 
-| Command           | Purpose                                                                                  |
-| ----------------- | ---------------------------------------------------------------------------------------- |
-| `/binote:mode`    | Activate binote-first mode in the current conversation. Reads notes before source.       |
-| `/binote:rule`    | Emit a `CLAUDE.md` snippet for always-on binote-first behavior.                          |
-| `/binote:save`    | Distill the current session's learnings into notes (design decisions, discoveries).      |
-| `/binote:verify`  | Audit notes against current source via parallel subagents. Writes reports to `_audit/`.  |
-| `/binote:ignore`  | Append binote's private artifacts (cache, logs, audits) to `.gitignore`.                 |
+| Command            | Purpose                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| `/binote:mode`     | Activate binote-first mode in the current conversation. Loads `_constitution.md` + reads notes before source. |
+| `/binote:rule`     | Emit a `CLAUDE.md` snippet for always-on binote-first behavior.                               |
+| `/binote:save`     | Distill the current session's learnings into notes (decisions → `_design/`, invariants → `_constitution.md`). |
+| `/binote:feature`  | Scaffold `_features/<NNN-slug>/` with `spec.md / plan.md / tasks.md / _dir.md` stubs.         |
+| `/binote:plan`     | Read a feature's `spec.md`, derive the touch set with `[[link]]`s, write `plan.md`.           |
+| `/binote:tasks`    | Decompose `plan.md` into an ordered `tasks.md` with `[P]` parallel markers + acceptance.      |
+| `/binote:verify`   | Audit notes against current source via parallel subagents. Writes reports to `_audit/`.       |
+| `/binote:clarify`  | Find coverage gaps — empty file mirrors, thin design docs, long-unverified notes.             |
+| `/binote:analyze`  | Cross-note consistency: do dependents respect `_constitution.md` / `_design/` invariants?     |
+| `/binote:ignore`   | Append binote's private artifacts (cache, logs, audits) to `.gitignore`.                      |
 
 ## MCP tools
 
@@ -170,11 +205,25 @@ Prefer full project-relative paths: `[[src/core/scanner.ts]]`, not `[[scanner]]`
 
 ## Workflow
 
+**Setup (once per project)**
+
 1. `binote init` (or `init` MCP tool) — scaffold empty notes mirroring source.
 2. `/binote:ignore` — gitignore the private artifacts.
-3. `/binote:mode` at conversation start — tell Claude to read notes before code.
-4. Work normally. When something non-obvious is learned, run `/binote:save` to capture it.
-5. After a refactor, `binote sync` finds orphans. `/binote:verify` audits notes that drifted.
+3. Draft `_constitution.md` (project-wide invariants) — `/binote:save` can extract it from existing notes.
+
+**Every session**
+
+4. `/binote:mode` at conversation start — loads constitution, tells Claude to read notes before code.
+5. Work normally. When something non-obvious is learned, run `/binote:save` to capture it.
+
+**For non-trivial changes (the forward workflow)**
+
+6. `/binote:feature <desc>` → edit `spec.md` → `/binote:plan <slug>` → `/binote:tasks <slug>` → execute → `/binote:save`.
+
+**Maintenance**
+
+7. After a refactor, `binote sync` finds orphans.
+8. `/binote:clarify` finds coverage gaps; `/binote:verify` audits drifted notes against source; `/binote:analyze` checks cross-note consistency.
 
 ## Design principles
 
@@ -187,7 +236,7 @@ Prefer full project-relative paths: `[[src/core/scanner.ts]]`, not `[[scanner]]`
 
 ## What it deliberately is not
 
-- Not a spec-driven workflow. Specs gate code in spec-kit/OpenSpec; binote *remembers* code. See [docs/comparison.md](docs/comparison.md).
+- Not an approval gate. Spec-kit and OpenSpec gate code on docs; binote has a forward workflow (`/binote:feature` → `plan` → `tasks`) but **no approval step** — every artifact is advisory context, not a release block. See [docs/comparison.md](docs/comparison.md).
 - Not a rename detector. Renames are a write-time concern handled by the agent; `sync` only detects deletions.
 - Not multi-project. Each `.binote/` is its own world.
 
