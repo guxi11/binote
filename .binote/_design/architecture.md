@@ -13,16 +13,31 @@ Two non-negotiables fall out of this mission:
 
 ## Note kinds and authority hierarchy
 
-| Kind                  | Path shape                  | Role                                                       | Authority on conflict |
-| --------------------- | --------------------------- | ---------------------------------------------------------- | --------------------- |
-| Source code           | `<project-rel>`             | Runtime truth — what *is*                                  | 1 (highest, runtime)  |
-| Design                | `_design/<topic>.md`        | Intended truth — what *should be*                          | 1 (highest, intent)   |
-| Dir overview          | `<dir>/_dir.md`             | Module-level summary, on-demand load                       | 2                     |
-| File annotation       | `<project-rel>.md`          | Per-file notes, mirror 1:1 with source                     | 3                     |
-| Standalone / ADR      | `_notes/<topic>.md`         | Decisions, cross-cutting discoveries, frozen at write-time | 3                     |
-| Audit snapshot        | `_audit/<date>/*.md`        | Historical capture, never authoritative                    | 4                     |
+| Kind                  | Path shape                       | Role                                                        | Authority on conflict |
+| --------------------- | -------------------------------- | ----------------------------------------------------------- | --------------------- |
+| Constitution          | `_constitution.md`               | Project-wide invariants — bedrock                           | 0 (highest, project)  |
+| Source code           | `<project-rel>`                  | Runtime truth — what *is*                                   | 1 (runtime)           |
+| Design                | `_design/<topic>.md`             | Module-level intent — what *should be*                      | 1 (intent)            |
+| Feature spec          | `_features/<NNN-slug>/spec.md`   | Feature-scoped intent (in-flight work)                      | 2                     |
+| Feature plan/tasks    | `_features/<NNN-slug>/{plan,tasks}.md` | Execution structure for the spec                      | 2                     |
+| Dir overview          | `<dir>/_dir.md`                  | Module-level summary, on-demand load                        | 3                     |
+| File annotation       | `<project-rel>.md`               | Per-file notes, mirror 1:1 with source                      | 3                     |
+| Standalone / ADR      | `_notes/<topic>.md`              | Decisions, cross-cutting discoveries, frozen at write-time  | 4                     |
+| Audit snapshot        | `_audit/<date>/*.md`             | Historical capture, never authoritative                     | 5                     |
 
-**Runtime truth and design truth are both authority-1 but answer different questions.** Source code answers "what runs"; `_design/` answers "what was intended". When they disagree, that *is* the report — flag it, don't reconcile silently.
+**`_constitution.md` outranks everything.** When source, `_design/`, or any other artifact contradicts the constitution, the constitution wins by intent — surface the gap.
+
+**Runtime truth and design truth tie at rank 1.** Source code answers "what runs"; `_design/` answers "what was intended at the module level". When they disagree, that *is* the report — flag it, don't reconcile silently.
+
+**Feature artifacts are scoped intent.** `_features/<NNN-slug>/spec.md` outranks file annotations within its declared touch set but is itself bounded by `_design/` and the constitution.
+
+## Path classification & note kinds
+
+Predicates live in [[src/core/binote-paths.ts]]:
+
+- `isNonMirrorNote(p)`   — any top-level `_<name>/` dir or root `_<name>.md` file (no source counterpart, so `notePathToProjectPath` returns null)
+- `isConstitutionNote(p)`, `isDesignNote(p)`, `isFeatureNote(p)`, `isStandaloneNote(p)`, `isDirNote(p)` — specific kind tests
+- `classifyNote(p)` → `"constitution" | "design" | "feature" | "notes" | "audit" | "dir" | "file"` — single-source-of-truth classifier consumed by `audit_status` for `/binote:clarify` grouping
 
 ## Core invariants
 

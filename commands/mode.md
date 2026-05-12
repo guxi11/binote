@@ -26,19 +26,22 @@ If the binote note is empty, read the source file directly.
 
 Right now, do this — and **only** this. Do not glob, do not read any other files:
 
-1. Read `.binote/_dir.md` (project root overview)
-2. Read `.binote/_index.json` (link graph)
+1. Call `read_note` with `notePaths: ["_constitution.md", "_dir.md"]`, `forwardDepth: 0` — pulls project-wide invariants + root overview in one call.
+2. Read `.binote/_index.json` (link graph).
 3. Report status in **one line**:
-   - If `_dir.md` is empty or `_index.json` is nearly empty → say "binote-first mode active · notes not yet populated, use `/binote:save` after working to build context"
-   - Otherwise → say "binote-first mode active · N nodes in graph" plus one short sentence on what the project is about
+   - If `_constitution.md` is empty → say "binote-first mode active · ⚠️ no constitution — run `/binote:save` and extract invariants to `_constitution.md`"
+   - Else if `_dir.md` is empty or `_index.json` is nearly empty → say "binote-first mode active · constitution loaded, notes thin — use `/binote:save` after working to build context"
+   - Otherwise → say "binote-first mode active · N nodes in graph · constitution: N invariants" plus one short sentence on what the project is about
+
+The constitution is **always loaded** at activation, regardless of token cost — it's the project's bedrock and outranks `_design/` + source on conflict. Everything else loads on-demand.
 
 No raw dumps. No file-by-file summaries. No reading directory `_dir.md` files upfront — those load on-demand.
 
-Directory and file notes are loaded **on-demand** when the user references them — not upfront.
-
 ## Reference
 
-- `_design/*.md` = **design authority** — intended architecture, module contracts, interface specs. Outranks file notes and ADRs on conflict.
+- `_constitution.md` = **project-wide invariants** (highest authority). Loaded on activation; consult before any non-trivial change.
+- `_design/*.md` = **module design authority** — intended architecture, module contracts. Outranks file notes / ADRs; outranked by `_constitution.md`.
+- `_features/<NNN-slug>/` = **in-flight feature workspace** — spec.md / plan.md / tasks.md / audit.md. Scaffold with `/binote:feature`.
 - `_dir.md` = directory overview
 - `file.ts.md` = file-level notes
 - `_notes/*.md` = standalone concept notes / ADRs

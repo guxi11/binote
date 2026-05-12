@@ -36,8 +36,10 @@ You are distilling this conversation's learnings into `.binote/` notes — desig
    - Preserve existing content — append, don't overwrite
    - Add `[[links]]` to related files discovered during the session
 4. Route standalone notes by kind:
-   - **Architecture, module contracts, interface design** → `.binote/_design/<topic>.md` (this is the design authority — what the system *should* be)
-   - **Decisions, tradeoffs, why-we-did-X** → `.binote/_notes/<topic>.md` (ADR-style, captures reasoning at a point in time)
+   - **Project-wide invariants** (rules that ALL changes must respect, not module-specific) → merge into `.binote/_constitution.md` (highest authority — outranks `_design/` and code on conflict)
+   - **Architecture, module contracts, interface design** → `.binote/_design/<topic>.md` (module-level design authority)
+   - **Feature-specific spec / plan / tasks for in-flight work** → DO NOT write here. Direct the user to `/binote:feature` → `/binote:plan` → `/binote:tasks`. This command is for distilling already-landed learnings.
+   - **Decisions, tradeoffs, why-we-did-X (post-hoc)** → `.binote/_notes/<topic>.md` (ADR-style, captures reasoning at a point in time)
    - **Cross-file discoveries that aren't authoritative spec** → `.binote/_notes/<topic>.md`
 5. After all writes, call the `rebuild_index` MCP tool to refresh `_index.json` (do NOT manually rebuild the json — use the tool)
 6. Report what was saved: which notes updated, which created, key insights captured

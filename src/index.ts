@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { makeConfig, projectPathToNotePath, dirToNotePath, shouldMirror, resolveLinkDetailed, notePathToProjectPath, isDirNote, isStandaloneNote } from "./core/binote-paths.js";
+import { makeConfig, projectPathToNotePath, dirToNotePath, shouldMirror, resolveLinkDetailed, notePathToProjectPath, classifyNote } from "./core/binote-paths.js";
 import { scanProjectStructure, scanExistingNotes } from "./core/scanner.js";
 import { readNote, writeNote, noteExists } from "./core/note-io.js";
 import { getOrBuildIndex, buildIndex, saveIndex, invalidateIndex } from "./core/link-index.js";
@@ -99,8 +99,12 @@ const sliceWindow = (text: string, path: string, from?: number, to?: number): st
 
 /** Sentinel for empty notes — tells the LLM where to look instead of returning ''. */
 const emptyNoteHint = (notePath: string): string => {
-  if (isStandaloneNote(notePath)) return `(empty standalone note: ${notePath})`;
-  if (isDirNote(notePath)) {
+  const kind = classifyNote(notePath);
+  if (kind === "constitution") return `(empty _constitution.md — run /binote:save to extract project invariants from _design/architecture.md)`;
+  if (kind === "design") return `(empty design note: ${notePath} — design authority slot, fill via /binote:save)`;
+  if (kind === "feature") return `(empty feature note: ${notePath} — scaffold via /binote:feature or /binote:plan)`;
+  if (kind === "notes") return `(empty standalone note: ${notePath})`;
+  if (kind === "dir") {
     const dir = notePath.replace(/\/?_dir\.md$/, "") || ".";
     return `(empty dir note — list directory: ${dir})`;
   }
@@ -460,19 +464,29 @@ server.registerTool(
 server.registerTool(
   "audit_status",
   {
-    description: "Report which notes are stale or unverified, sorted by drift severity. Used by /binote:verify to pick targets. Stats and frontmatter are read on demand — no persistent meta state.",
+    description: "Report which notes are stale, unverified, or empty — sorted by drift severity. Each row carries `kind` (file/dir/design/feature/notes/audit/constitution) and `contentLength` (chars of body, excluding frontmatter). Used by /binote:verify (drift) and /binote:clarify (coverage gaps).",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       level: z.enum(["fresh", "warning", "stale", "unverified"]).optional().describe("Filter by staleness level. Omit to return all (sorted)."),
+      kind: z.enum(["constitution", "design", "feature", "notes", "audit", "dir", "file"]).optional().describe("Filter by note kind. Useful for clarify: kind='file' surfaces empty mirrored notes; kind='design' shows design coverage."),
       limit: z.number().int().positive().optional().describe("Max entries to return (default: 20)"),
     },
   },
-  async ({ projectRoot, level, limit }) => {
+  async ({ projectRoot, level, limit, kind }) => {
     const config = makeConfig(projectRoot);
     const cap = limit ?? 20;
 
     const allNotes = await scanExistingNotes(config);
-    const stalenessMap = await stalenessFor(config, allNotes);
+    const [stalenessMap, lengthEntries] = await Promise.all([
+      stalenessFor(config, allNotes),
+      Promise.all(
+        allNotes.map(async (p): Promise<readonly [string, number]> => {
+          const raw = await readNote(config, p);
+          return [p, raw === null ? 0 : parseFrontmatter(raw).body.trim().length];
+        }),
+      ),
+    ]);
+    const lengthMap: Readonly<Record<string, number>> = Object.fromEntries(lengthEntries);
 
     type Row = {
       readonly notePath: string;
@@ -480,6 +494,8 @@ server.registerTool(
       readonly daysSourceAheadOfNote: number | null;
       readonly daysSinceVerified: number | null;
       readonly hint: string;
+      readonly kind: ReturnType<typeof classifyNote>;
+      readonly contentLength: number;
     };
 
     const rows: Row[] = Object.entries(stalenessMap).map(([notePath, s]) => ({
@@ -488,9 +504,13 @@ server.registerTool(
       daysSourceAheadOfNote: s.daysSourceAheadOfNote,
       daysSinceVerified: s.daysSinceVerified,
       hint: s.hint,
+      kind: classifyNote(notePath),
+      contentLength: lengthMap[notePath] ?? 0,
     }));
 
-    const filtered = level ? rows.filter(r => r.level === level) : rows;
+    const filtered = rows
+      .filter(r => !level || r.level === level)
+      .filter(r => !kind || r.kind === kind);
 
     // Sort: stale > warning > unverified > fresh; within group, larger drift first.
     const levelRank = { stale: 3, warning: 2, unverified: 1, fresh: 0 } as const;

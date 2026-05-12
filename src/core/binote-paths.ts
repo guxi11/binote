@@ -35,20 +35,47 @@ export const projectPathToNotePath = (projectRelPath: string): string =>
 export const dirToNotePath = (dirRelPath: string): string =>
   join(dirRelPath || ".", "_dir.md");
 
-/** src/index.ts.md → src/index.ts, _dir.md → null, _notes/x.md → null */
+/** src/index.ts.md → src/index.ts, _dir.md → null, _notes/x.md → null, _design/x.md → null, _features/x/y.md → null */
 export const notePathToProjectPath = (noteRelPath: string): string | null => {
-  if (isStandaloneNote(noteRelPath) || isDirNote(noteRelPath)) return null;
+  if (isNonMirrorNote(noteRelPath) || isDirNote(noteRelPath)) return null;
   return noteRelPath.replace(/\.md$/, "");
 };
 
+const firstSegment = (p: string): string => p.split(/[\\/]/, 1)[0] ?? "";
+
+/** Any note with no source-file counterpart: top-level `_<name>/` dir or root `_<name>.md` file. */
+export const isNonMirrorNote = (noteRelPath: string): boolean =>
+  firstSegment(noteRelPath).startsWith("_");
+
 export const isStandaloneNote = (noteRelPath: string): boolean =>
-  noteRelPath.startsWith("_notes/") || noteRelPath.startsWith("_notes\\");
+  firstSegment(noteRelPath) === "_notes";
+
+export const isDesignNote = (noteRelPath: string): boolean =>
+  firstSegment(noteRelPath) === "_design";
+
+export const isFeatureNote = (noteRelPath: string): boolean =>
+  firstSegment(noteRelPath) === "_features";
+
+export const isConstitutionNote = (noteRelPath: string): boolean =>
+  noteRelPath === "_constitution.md";
 
 export const isDirNote = (noteRelPath: string): boolean =>
   basename(noteRelPath) === "_dir.md";
 
 export const isMetaFile = (noteRelPath: string): boolean =>
   noteRelPath === "_index.json" || basename(noteRelPath).startsWith("_");
+
+/** Classify a note for audit / coverage reports. Order matters — most specific first. */
+export type NoteClass = "constitution" | "design" | "feature" | "notes" | "audit" | "dir" | "file";
+export const classifyNote = (noteRelPath: string): NoteClass => {
+  if (isConstitutionNote(noteRelPath)) return "constitution";
+  if (isDesignNote(noteRelPath)) return "design";
+  if (isFeatureNote(noteRelPath)) return "feature";
+  if (isStandaloneNote(noteRelPath)) return "notes";
+  if (firstSegment(noteRelPath) === "_audit") return "audit";
+  if (isDirNote(noteRelPath)) return "dir";
+  return "file";
+};
 
 /**
  * Resolve a [[link target]] to a note path with full detail.
