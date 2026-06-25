@@ -1,8 +1,9 @@
 import type { BinoteConfig, LinkIndex, LinkRef, Backlink } from "../types.js";
 import { INDEX_VERSION } from "../types.js";
+import { stat } from "node:fs/promises";
 import { scanExistingNotes } from "./scanner.js";
 import { readNote } from "./note-io.js";
-import { resolveLinkDetailed } from "./binote-paths.js";
+import { resolveLinkDetailed, noteAbsPath } from "./binote-paths.js";
 import { readFileSafe, writeFileSafe } from "../util/fs-helpers.js";
 
 const LINK_RE = /\[\[([^\[\]]+)\]\]/g;
@@ -70,13 +71,35 @@ export const buildIndex = async (config: BinoteConfig): Promise<LinkIndex> => {
 export const saveIndex = async (config: BinoteConfig, index: LinkIndex): Promise<void> =>
   writeFileSafe(config.indexPath, JSON.stringify(index, null, 2));
 
-/** Load cached index or rebuild. Stale (older version) caches silently rebuild. */
+const fileMtimeMs = async (absPath: string): Promise<number> => {
+  try { return (await stat(absPath)).mtimeMs; } catch { return 0; }
+};
+
+/**
+ * Is the cached index newer than every note, with no notes added/removed?
+ * mtime ≥ newest note catches edits + additions; count guards deletes/renames.
+ * Self-validation, so out-of-band changes (git merge/checkout, direct fs edits)
+ * that bypass `write_note`'s push-invalidation no longer serve a stale graph.
+ */
+const indexIsFresh = async (config: BinoteConfig, cachedNoteCount: number): Promise<boolean> => {
+  const indexMtime = await fileMtimeMs(config.indexPath);
+  if (indexMtime === 0) return false;
+  const notes = await scanExistingNotes(config);
+  if (notes.length !== cachedNoteCount) return false;
+  const mtimes = await Promise.all(notes.map((n) => fileMtimeMs(noteAbsPath(config, n))));
+  return mtimes.every((m) => m <= indexMtime);
+};
+
+/** Load cached index or rebuild. Rebuilds on version drift or note-mtime/count drift. */
 export const getOrBuildIndex = async (config: BinoteConfig): Promise<LinkIndex> => {
   const cached = await readFileSafe(config.indexPath);
   if (cached) {
     try {
       const parsed = JSON.parse(cached) as Partial<LinkIndex>;
-      if (parsed.version === INDEX_VERSION) return parsed as LinkIndex;
+      if (parsed.version === INDEX_VERSION && parsed.links
+          && await indexIsFresh(config, Object.keys(parsed.links).length)) {
+        return parsed as LinkIndex;
+      }
     } catch { /* fall through to rebuild */ }
   }
   const index = await buildIndex(config);
