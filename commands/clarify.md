@@ -20,6 +20,10 @@ Call `audit_status` MCP tool with `limit: 500` (or the project's note count, whi
 
 If the user passed `--kind`, also call `audit_status` with `kind: "<value>"` to narrow at the source.
 
+Also call `knowledge_gaps` (same projectRoot). It returns:
+- `missingMirrors` — dangling [[targets]] that map to real project files, ranked by inbound reference count. These are **demand signals**: other notes already cite these files, the mirror just doesn't exist yet.
+- `orphanNotes` — `_notes/` + `_design/` notes with zero backlinks (reachable only via search).
+
 ## Step 2 — Score gaps
 
 For each note, derive a single gap score plus a category. Categories (a note can have multiple — list all that apply):
@@ -28,16 +32,19 @@ For each note, derive a single gap score plus a category. Categories (a note can
 2. **STALE** — `level === "stale"` (source +30d ahead of note/verify).
 3. **UNVERIFIED** — `level === "unverified"` AND `contentLength >= min-length` (note has content but no `lastVerified` stamp ever).
 4. **THIN-DESIGN** — `kind === "design"` AND `contentLength < 300` chars. Design docs should be substantive; a short one is a placeholder.
-5. **ORPHAN-RISK** — note exists for a source file with high churn (heuristic: skip unless you can check git log; otherwise omit this category).
+5. **MISSING-MIRROR** — from `knowledge_gaps.missingMirrors`. A note the graph demands but nobody wrote.
+6. **ORPHAN-NOTE** — from `knowledge_gaps.orphanNotes`. Knowledge that exists but nothing links to.
 
 Gap score (higher = more urgent):
 
 ```
 score = 0
-if EMPTY:        score += 100 - (contentLength * 2)    # 0-char file mirror = 100
-if STALE:        score += min(daysSourceAheadOfNote ?? 0, 90)
-if UNVERIFIED:   score += 20
-if THIN-DESIGN:  score += 60
+if EMPTY:          score += 100 - (contentLength * 2)    # 0-char file mirror = 100
+if STALE:          score += min(daysSourceAheadOfNote ?? 0, 90)
+if UNVERIFIED:     score += 20
+if THIN-DESIGN:    score += 60
+if MISSING-MIRROR: score = 40 + 10 * inboundRefs          # demand-weighted, separate row
+if ORPHAN-NOTE:    score = 30
 ```
 
 ## Step 3 — Render the report
@@ -47,10 +54,16 @@ Sort by score descending. Take top N. Print as a grouped table:
 ```
 Coverage gaps (top <N>):
 
+MISSING mirrors, demand-ranked (<count>):
+  src/lib/expand/identityTranslation.ts   21 inbound refs   [most-cited absent note]
+  src/lib/expand/snocGraph.ts             12 inbound refs
+
 EMPTY file mirrors (<count>):
   src/core/sync-engine.ts.md           0 chars     [run /binote:save against this file]
   src/core/link-index.ts.md            0 chars
-  src/cli.ts.md                        0 chars
+
+ORPHAN notes — zero backlinks (<count>):
+  _notes/code-cleanup-checklist.md                 [link from the notes that should cite it]
 
 THIN-DESIGN (<count>):
   _design/architecture.md            280 chars     [split into per-module design docs]
@@ -62,9 +75,9 @@ UNVERIFIED with content (<count>):
   _notes/depth-expansion.md           verified: never
 
 Suggested next moves:
-  1. Pick 3 EMPTY file mirrors, ask the user which to populate (or run /binote:save after working on them).
-  2. Run /binote:verify --top 5 on STALE rows.
-  3. Decide whether THIN-DESIGN entries need a split — surface to the user.
+  1. Write the top MISSING mirrors — the graph already cites them; each write also repairs its dangling links.
+  2. Pick 3 EMPTY file mirrors, ask the user which to populate (or run /binote:save after working on them).
+  3. Run /binote:verify --top 5 on STALE rows; link ORPHAN notes from their natural citers.
 ```
 
 Skip empty categories. Keep the report under ~40 lines — if more rows qualify, append `… and <K> more (rerun with --top <K>)`.

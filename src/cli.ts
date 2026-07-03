@@ -184,19 +184,13 @@ const commands: Record<string, (args: readonly string[]) => Promise<void>> = {
     const config = makeConfig(rootFromFlags(flags));
     const index = await getOrBuildIndex(config);
     const detail = boolFlag(flags, "detail");
+    const refs = index.links[notePath] ?? [];
+    const backs = index.backlinks[notePath] ?? [];
+    const forward = [...new Set(refs.flatMap((r) => (r.resolved ? [r.resolved] : [])))];
+    const backlinks = [...new Set(backs.map((b) => b.from))];
     log(detail
-      ? {
-          notePath,
-          forward: index.forward[notePath] ?? [],
-          backlinks: index.reverse[notePath] ?? [],
-          forwardDetails: index.links[notePath] ?? [],
-          backlinkDetails: index.backlinks[notePath] ?? [],
-        }
-      : {
-          notePath,
-          forward: index.forward[notePath] ?? [],
-          backlinks: index.reverse[notePath] ?? [],
-        });
+      ? { notePath, forward, backlinks, forwardDetails: refs, backlinkDetails: backs }
+      : { notePath, forward, backlinks });
   },
 
   async search(args) {

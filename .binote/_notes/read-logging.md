@@ -1,28 +1,14 @@
-# Read Logging Design
+# Read Logging Design (SUPERSEDED — removed in 0.4.0)
 
-## Decision
+## Status
 
-All binote note reads are logged to `.binote/_read.log` via the `read_note` MCP tool. The CLAUDE.md rule enforces that AI must use `read_note` instead of directly reading `.binote/` files with the Read tool.
+**Removed.** Read logging went through two incarnations — `.binote/_read.log`, then per-day `.binote/_sessions/<date>.jsonl` — and was deleted entirely in 0.4.0.
 
-## Why MCP-level logging, not prompt-level output
+## Why removed
 
-Three alternatives were considered:
-1. **Prompt rule asking AI to list read docs in response** — unreliable (AI may forget), pollutes output, ephemeral (lost after conversation)
-2. **Direct file reads with no logging** — original approach, no observability
-3. **MCP tool logging** (chosen) — deterministic, silent, persistent, greppable
+Field data (912 logged reads in one real project) showed the log was **write-only exhaust**: 40 MB on disk, no tool/skill/command ever read it back, and each entry re-embedded the full tool result — roughly doubling the byte cost of every read. The "session is replayable" promise was never implemented, and the useful by-product (which notes are hot) is better answered by the link graph (`knowledge_gaps`) than by read counts.
 
-## How it works
+## What remains
 
-- `read_note` handler in [[src/index.ts]] defines a local `logRead` that appends to `config.logPath`
-- Log format: `[ISO timestamp] notePath\n<content>\n---\n`
-- `logPath` is `.binote/_read.log`, defined in [[src/core/binote-paths.ts]] via `makeConfig`
-- `appendLog` utility lives in [[src/util/fs-helpers.ts]]
-- Both single and batch reads are logged
-
-## Related files
-
-- [[src/index.ts]] — read_note handler with logging
-- [[src/core/binote-paths.ts]] — `logPath` in config
-- [[src/util/fs-helpers.ts]] — `appendLog` helper
-- [[src/types.ts]] — `BinoteConfig.logPath` field
-- [[commands/rule.md]] — rule template updated to mandate MCP tool usage
+- The CLAUDE.md rule still mandates `read_note` over raw Read — the justification is now fuzzy resolution + staleness banners + excerpt graph reads, not observability.
+- `.binote/_sessions/` and `_read.log` stay in `PRIVATE_PATHS` ([[src/core/gitignore.ts]]) so legacy directories remain gitignored.

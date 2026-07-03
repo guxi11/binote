@@ -2,18 +2,15 @@
 
 ## Problem
 
-`read_note` returned raw markdown with `[[links]]` as plain text. LLMs had to manually chase links via `query_links` → `read_note` (2+ round trips). In practice, LLMs rarely follow links unless system-prompted.
+`read_note` returned raw markdown with `[[links]]` as plain text. LLMs had to manually chase links (2+ round trips). In practice, LLMs rarely follow links unless system-prompted.
 
-## Decision
+## Decision (current shape, 0.4.0)
 
-Added `depth` param to `read_note` (0 = note only, 1 = expand linked notes). When `depth=1`, uses [[src/core/link-index.ts]] index to resolve forward `[[links]]`, reads all resolved targets in parallel, returns structured `{ content, linked, dangling }`.
+`forwardDepth` (0-3) expands forward `[[links]]`; `backDepth` (0-1) expands incoming refs at the root only. The old `depth` param survives as a deprecated alias; `query_links` was folded into the same tool long ago.
+
+**Excerpt-by-default (0.4.0):** the requested root renders in full; every linked/backlinked node renders as a compact excerpt (frontmatter description + first paragraph + heading outline + a `links:` nav line) — `detail: "full"` restores body inlining. Output is markdown, not pretty-printed JSON. Rationale: measured 12.6× payload blow-up at `forwardDepth: 1` when full bodies were inlined (avg 118 KB/read, worst 487 KB); excerpts cut ~78% while keeping enough signal to decide where to drill. Implementation: [[src/core/graph-read.ts]], [[src/core/excerpt.ts]].
 
 ## Tradeoffs
 
-- **Pro**: Single call gets full context graph. Eliminates the most common multi-tool pattern.
-- **Con**: Could blow up token budget on heavily-linked notes. Capped at depth=1 (no recursive expansion) to bound this.
-- **query_links not removed**: Still needed for backlinks ("who links TO me"), which are the reverse direction. Depth expansion only follows forward links.
-
-## Rule update
-
-CLAUDE.md and `commands/rule.md` updated: "Follow [[links]]" → "Use `depth: 1`" + "Use `query_links` only for backlinks".
+- **Pro**: Single call still gets the context graph; token cost now scales with what the agent actually drills into.
+- **Con**: Details behind an excerpt need a second read — deliberate: progressive disclosure beats speculative inlining.

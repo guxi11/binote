@@ -3,7 +3,7 @@ import { INDEX_VERSION } from "../types.js";
 import { stat } from "node:fs/promises";
 import { scanExistingNotes } from "./scanner.js";
 import { readNote } from "./note-io.js";
-import { resolveLinkDetailed, noteAbsPath } from "./binote-paths.js";
+import { resolveLinkDetailed, noteAbsPath, classifyNote } from "./binote-paths.js";
 import { readFileSafe, writeFileSafe } from "../util/fs-helpers.js";
 
 const LINK_RE = /\[\[([^\[\]]+)\]\]/g;
@@ -19,9 +19,18 @@ const scanOccurrences = (content: string): readonly Occurrence[] =>
     }))
   );
 
+/**
+ * Notes that participate in the link graph. _audit/ reports are excluded in
+ * both directions: their mass backlinks drowned the reverse graph (the reason
+ * backDepth had to stay disabled), and links pointing at them may dangle —
+ * they are transient artifacts, not knowledge.
+ */
+export const indexableNotes = async (config: BinoteConfig): Promise<readonly string[]> =>
+  (await scanExistingNotes(config)).filter((n) => classifyNote(n) !== "audit");
+
 /** Build link index from all notes (single pass, line-aware, dangling-tracking). */
 export const buildIndex = async (config: BinoteConfig): Promise<LinkIndex> => {
-  const notes = await scanExistingNotes(config);
+  const notes = await indexableNotes(config);
 
   // Pass 1: collect raw occurrences per note.
   const occurrencesByNote: Record<string, readonly Occurrence[]> = {};
@@ -53,18 +62,7 @@ export const buildIndex = async (config: BinoteConfig): Promise<LinkIndex> => {
     links[notePath] = refs;
   }
 
-  // Derive flat projections for legacy consumers.
-  const forward: Record<string, readonly string[]> = Object.fromEntries(
-    Object.entries(links).map(([k, refs]) => [
-      k,
-      refs.flatMap((r) => (r.resolved ? [r.resolved] : [])),
-    ])
-  );
-  const reverse: Record<string, readonly string[]> = Object.fromEntries(
-    Object.entries(backlinks).map(([k, bls]) => [k, bls.map((b) => b.from)])
-  );
-
-  return { version: INDEX_VERSION, links, backlinks, forward, reverse, dangling };
+  return { version: INDEX_VERSION, links, backlinks, dangling };
 };
 
 /** Save index to _index.json */
@@ -76,7 +74,7 @@ const fileMtimeMs = async (absPath: string): Promise<number> => {
 };
 
 /**
- * Is the cached index newer than every note, with no notes added/removed?
+ * Is the cached index newer than every indexable note, with none added/removed?
  * mtime ≥ newest note catches edits + additions; count guards deletes/renames.
  * Self-validation, so out-of-band changes (git merge/checkout, direct fs edits)
  * that bypass `write_note`'s push-invalidation no longer serve a stale graph.
@@ -84,7 +82,7 @@ const fileMtimeMs = async (absPath: string): Promise<number> => {
 const indexIsFresh = async (config: BinoteConfig, cachedNoteCount: number): Promise<boolean> => {
   const indexMtime = await fileMtimeMs(config.indexPath);
   if (indexMtime === 0) return false;
-  const notes = await scanExistingNotes(config);
+  const notes = await indexableNotes(config);
   if (notes.length !== cachedNoteCount) return false;
   const mtimes = await Promise.all(notes.map((n) => fileMtimeMs(noteAbsPath(config, n))));
   return mtimes.every((m) => m <= indexMtime);

@@ -1,4 +1,4 @@
-export const INDEX_VERSION = 2 as const;
+export const INDEX_VERSION = 3 as const;
 
 export type BinoteConfig = {
   readonly projectRoot: string;
@@ -6,15 +6,16 @@ export type BinoteConfig = {
   readonly notesDir: string;
   readonly indexPath: string;
   readonly auditDir: string;
-  readonly sessionsDir: string;
   readonly ignore: readonly string[];
 };
 
-/** Inputs to staleness derivation — all looked up on demand, never persisted. */
+/** Inputs to staleness derivation — all looked up on demand, never persisted.
+ *  Change times come from git (last commit touching the path) when available
+ *  and the path is clean; fs mtime otherwise. */
 export type StalenessInputs = {
-  /** ISO mtime of the source file. null for _dir / _notes / standalone. */
+  /** ISO change time of the source file. null for _dir / _notes / standalone. */
   readonly sourceMtime: string | null;
-  /** ISO mtime of the .binote/<path>.md file. */
+  /** ISO change time of the .binote/<path>.md file. */
   readonly noteMtime: string;
   /** Parsed from note frontmatter. null if never verified. */
   readonly lastVerified: string | null;
@@ -51,14 +52,12 @@ export type Backlink = {
 
 export type LinkIndex = {
   readonly version: typeof INDEX_VERSION;
-  /** Per-note outgoing links with line numbers + resolution state. */
+  /** Per-note outgoing links with line numbers + resolution state.
+   *  _audit/ reports are excluded from the graph (both directions) — they are
+   *  transient artifacts whose mass backlinks drowned the reverse graph. */
   readonly links: Record<string, readonly LinkRef[]>;
   /** Per-note incoming links (derived from links, stored for O(1) lookup). */
   readonly backlinks: Record<string, readonly Backlink[]>;
-  /** Flat projection of links (resolved targets only). Legacy. */
-  readonly forward: Record<string, readonly string[]>;
-  /** Flat projection of backlinks (source paths only). Legacy. */
-  readonly reverse: Record<string, readonly string[]>;
   /** Unresolved [[X]] occurrences keyed by raw target. */
   readonly dangling: Record<string, readonly Backlink[]>;
 };
@@ -82,6 +81,8 @@ export type SearchHit = {
   readonly lineContent: string;
   readonly context: string;
   readonly links: readonly MatchedLink[];
+  /** Relevance score (ranked engine only; absent on regex scans). */
+  readonly score?: number;
 };
 
 export type ResolveStrategy = "exact" | "as-is" | "dir" | "basename" | "substring" | "none";

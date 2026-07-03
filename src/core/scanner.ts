@@ -1,16 +1,40 @@
+import { globby } from "globby";
 import type { BinoteConfig } from "../types.js";
-import { walkDir, walkDirWithDirs } from "../util/fs-helpers.js";
 
-/** Scan project files (excluding ignored dirs) */
-export const scanProjectFiles = (config: BinoteConfig): Promise<readonly string[]> =>
-  walkDir(config.projectRoot, config.ignore);
+/**
+ * Name-only ignore entries expand to recursive globs; anything already
+ * glob-shaped (contains / or *) passes through. This is what makes init's
+ * `ignore` param actually work.
+ */
+const toGlobs = (ignore: readonly string[]): string[] =>
+  ignore.flatMap((e) => (/[*/]/.test(e) ? [e] : [`**/${e}`, `**/${e}/**`]));
 
-/** Scan project files and directories */
-export const scanProjectStructure = (config: BinoteConfig) =>
-  walkDirWithDirs(config.projectRoot, config.ignore);
+/** Scan project files. gitignore-aware; dotfiles excluded. Posix paths. */
+export const scanProjectFiles = (config: BinoteConfig): Promise<string[]> =>
+  globby(["**/*"], {
+    cwd: config.projectRoot,
+    gitignore: true,
+    ignore: toGlobs(config.ignore),
+    dot: false,
+  });
 
-/** Scan existing notes under .binote/ */
-export const scanExistingNotes = async (config: BinoteConfig): Promise<readonly string[]> => {
-  const files = await walkDir(config.binoteDir, []);
-  return files.filter((f) => f.endsWith(".md"));
+/** Scan project files and directories. */
+export const scanProjectStructure = async (
+  config: BinoteConfig,
+): Promise<{ files: readonly string[]; dirs: readonly string[] }> => {
+  const [files, dirs] = await Promise.all([
+    scanProjectFiles(config),
+    globby(["**/*"], {
+      cwd: config.projectRoot,
+      gitignore: true,
+      ignore: toGlobs(config.ignore),
+      dot: false,
+      onlyDirectories: true,
+    }),
+  ]);
+  return { files, dirs };
 };
+
+/** Scan existing notes under .binote/. NOT gitignore-aware — _audit/ etc. must stay visible. */
+export const scanExistingNotes = (config: BinoteConfig): Promise<string[]> =>
+  globby(["**/*.md"], { cwd: config.binoteDir, gitignore: false, dot: false });

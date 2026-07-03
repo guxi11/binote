@@ -5,7 +5,8 @@ import type { BinoteConfig, Staleness, StalenessLevel, StalenessInputs } from ".
 import { writeFileSafe } from "../util/fs-helpers.js";
 import { noteAbsPath, notePathToProjectPath } from "./binote-paths.js";
 import { readNote } from "./note-io.js";
-import { parseFrontmatter, updateFrontmatter } from "./frontmatter.js";
+import { parseFrontmatter, fmString, updateFrontmatter } from "./frontmatter.js";
+import { getGitTimes, gitChangeTimeIso, type GitTimes } from "./git-times.js";
 
 const DAY_MS = 86_400_000;
 const WARNING_DAYS = 7;
@@ -30,7 +31,7 @@ const levelFromDrift = (drift: number): StalenessLevel =>
     : drift < STALE_DAYS ? "warning"
     : "stale";
 
-/** Pure derivation: stats + frontmatter → Staleness. */
+/** Pure derivation: change times + frontmatter → Staleness. */
 export const computeStaleness = (m: StalenessInputs): Staleness => {
   const daysSinceVerified = m.lastVerified ? daysSince(m.lastVerified) : null;
 
@@ -61,21 +62,38 @@ export const computeStaleness = (m: StalenessInputs): Staleness => {
   return { level, daysSourceAheadOfNote: drift, daysSinceVerified, hint };
 };
 
+/**
+ * Change time for a projectRoot-relative path: last commit time when the path
+ * is tracked and clean (survives checkout/clone, which rewrite mtimes);
+ * fs mtime when dirty, untracked, or outside git.
+ */
+const changeTimeIso = async (
+  config: BinoteConfig,
+  relPath: string,
+  git: GitTimes | null,
+): Promise<string | null> =>
+  gitChangeTimeIso(git, relPath) ?? mtimeIso(join(config.projectRoot, relPath));
+
 const stalenessForOne = async (
   config: BinoteConfig,
   notePath: string,
+  git: GitTimes | null,
 ): Promise<Staleness | null> => {
+  // Note existence gate stays fs-based: a committed-then-deleted note must skip.
   const noteMtime = await mtimeIso(noteAbsPath(config, notePath));
   if (noteMtime === null) return null;
+  const noteTime = gitChangeTimeIso(git, `.binote/${notePath}`) ?? noteMtime;
+
   const projPath = notePathToProjectPath(notePath);
-  const sourceMtime = projPath
-    ? await mtimeIso(join(config.projectRoot, projPath))
-    : null;
+  const sourceTime = projPath === null
+    ? null
+    : await changeTimeIso(config, projPath, git);
+
   const raw = await readNote(config, notePath);
   const lastVerified = raw
-    ? parseFrontmatter(raw).frontmatter.lastVerified ?? null
+    ? fmString(parseFrontmatter(raw).frontmatter, "lastVerified")
     : null;
-  return computeStaleness({ sourceMtime, noteMtime, lastVerified });
+  return computeStaleness({ sourceMtime: sourceTime, noteMtime: noteTime, lastVerified });
 };
 
 /** Batch staleness lookup. Skips notes that don't exist on disk. */
@@ -83,9 +101,10 @@ export const stalenessFor = async (
   config: BinoteConfig,
   notePaths: readonly string[],
 ): Promise<Readonly<Record<string, Staleness>>> => {
+  const git = await getGitTimes(config.projectRoot);
   const entries = await Promise.all(
     notePaths.map(async (p): Promise<readonly [string, Staleness] | null> => {
-      const s = await stalenessForOne(config, p);
+      const s = await stalenessForOne(config, p, git);
       return s ? [p, s] : null;
     }),
   );

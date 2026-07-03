@@ -14,7 +14,7 @@ Three things fall out of this:
 
 - **No discovery cost.** Path equivalence means the agent never searches for notes.
 - **One reference primitive.** `[[link]]` is the *only* cross-reference syntax — resolution, search, and graph traversal all derive from it.
-- **Reads are observable.** Every `read_note` call is logged to `.binote/_sessions/<date>.jsonl`, so an LLM session is replayable.
+- **Context-frugal by default.** Graph reads inline the requested note in full and every linked note as a compact excerpt (markdown, not JSON) — the agent drills into exactly the neighbours it needs.
 
 ## How it works
 
@@ -36,7 +36,6 @@ myproject/
 │   │       └── tasks.md        ← ordered, parallelizable work
 │   ├── _notes/                 ← ADRs, cross-cutting decisions
 │   ├── _audit/<date>/          ← /binote:verify + /binote:analyze reports
-│   ├── _sessions/<date>.jsonl  ← read logs (gitignored)
 │   ├── _index.json             ← derived link graph (gitignored)
 │   └── src/
 │       ├── _dir.md             ← directory overview
@@ -52,7 +51,7 @@ Notes are plain markdown with `[[bidirectional links]]`:
 Entry point. Orchestrates [[src/utils/helpers.ts]] and follows [[_design/architecture.md]].
 ```
 
-`read_note(notePath, forwardDepth: 1)` returns the note **and** all linked notes in one call — the recommended default when entering a file.
+`read_note(notePath, forwardDepth: 1)` returns the note in full **plus every linked note as an excerpt** (description + first paragraph + heading outline + a `links:` nav line) — the recommended default when entering a file. Drill into a specific neighbour with a follow-up read; `detail: "full"` inlines whole bodies when you really want them.
 
 ## Authority hierarchy
 
@@ -96,7 +95,7 @@ Unlike spec-kit's isolated `.specify/` folder, the touch set in `plan.md` is a r
 
 Every note carries an implicit drift signal:
 
-- `sourceMtime` vs `noteMtime` — has the file changed since the note was written?
+- source change time vs note change time — has the file changed since the note was written? Change times are **git-aware**: last commit touching the path (survives `git checkout`/`clone`, which rewrite mtimes), falling back to fs mtime for dirty/untracked files and non-git projects.
 - `lastVerified` (frontmatter) — has a human/agent re-confirmed the note?
 
 Derived level: `fresh | warning | stale | unverified`. `read_note` attaches `staleness` to any node above `fresh`. The `audit_status` tool ranks notes by drift severity. `/binote:verify` spawns parallel subagents that extract falsifiable claims from each note, grep them against source, and write read-only reports to `_audit/<date>/` — never mutating notes automatically.
@@ -153,7 +152,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 | `/binote:plan`     | Read a feature's `spec.md`, derive the touch set with `[[link]]`s, write `plan.md`.           |
 | `/binote:tasks`    | Decompose `plan.md` into an ordered `tasks.md` with `[P]` parallel markers + acceptance.      |
 | `/binote:verify`   | Audit notes against current source via parallel subagents. Writes reports to `_audit/`.       |
-| `/binote:clarify`  | Find coverage gaps — empty file mirrors, thin design docs, long-unverified notes.             |
+| `/binote:clarify`  | Find coverage gaps — demand-ranked missing mirrors, orphan notes, empty mirrors, thin design docs, drifted notes. |
 | `/binote:analyze`  | Cross-note consistency: do dependents respect `_constitution.md` / `_design/` invariants?     |
 | `/binote:ignore`   | Append binote's private artifacts (cache, logs, audits) to `.gitignore`.                      |
 
@@ -161,13 +160,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 | Tool             | Purpose                                                                  |
 | ---------------- | ------------------------------------------------------------------------ |
-| `init`           | Scaffold `.binote/` from project tree. Idempotent.                       |
-| `read_note`      | Read with optional `forwardDepth` (links) and `backDepth` (backlinks). Logged. |
+| `init`           | Scaffold `.binote/` from project tree (gitignore-aware scan). Idempotent. |
+| `read_note`      | Graph read: root in full, linked/backlinked nodes as excerpts (`detail: "full"` opts out). Markdown output. |
 | `write_note`     | Create/update a note. Invalidates the index.                             |
-| `search`         | Full-text search; hits include resolved `[[links]]` on the matched line. |
+| `search`         | Relevance-ranked full-text search (fuzzy, path/heading-boosted); hits carry scores + resolved `[[links]]`. `regex: true` for exact line scans. |
 | `sync`           | Detect orphaned notes (source deleted, mirror survives). No rename guess. |
 | `rebuild_index`  | Force `_index.json` rebuild without LLM token cost. Use after bulk writes. |
-| `audit_status`   | Report stale/unverified notes ranked by drift.                           |
+| `audit_status`   | Report stale/unverified notes ranked by drift (git-aware).               |
+| `knowledge_gaps` | Demand-ranked gaps: missing mirrors (dangling targets that are real files, by inbound refs) + orphan notes (zero backlinks). |
 | `mark_verified`  | Stamp `lastVerified: <ISO>` into a note's frontmatter.                   |
 | `ignore`         | Append private artifacts to `.gitignore`. Idempotent.                    |
 | `list_notes`     | Enumerate notes (no content read).                                       |
@@ -189,7 +189,7 @@ binote sync     [--dry-run] [--root D]
 binote ignore   [--root D]
 ```
 
-No arguments → starts the MCP server (stdio transport). CLI reads are **not** logged (logging exists for replayability of LLM context, not human use).
+No arguments → starts the MCP server (stdio transport).
 
 ## `[[link]]` resolution
 
@@ -230,7 +230,7 @@ Prefer full project-relative paths: `[[src/core/scanner.ts]]`, not `[[scanner]]`
 - **Plain markdown.** Human-readable, editable, diffable.
 - **No database.** `_index.json` is a derived cache; delete it freely and `rebuild_index` reconstructs from notes.
 - **No `_meta/` shadow tree.** Frontmatter (`lastVerified` only) is the sole durable per-note metadata; everything else is computed on demand.
-- **Backlinks opt-in.** Forward links are cheap; backlinks are noisy reverse samples — `backDepth: 0` is the default.
+- **Backlinks opt-in.** `backDepth: 0` is the default; set 1 for "who depends on me". `_audit/` reports are excluded from the link graph so backlinks stay signal, not noise.
 - **Mixed authorship.** Humans and agents both write notes. `_design/` outranks file annotations on conflict.
 - **Non-code filtered.** JSON, YAML, lockfiles, images aren't mirrored. The ignore list lives in `binote-paths.ts`.
 
