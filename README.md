@@ -153,6 +153,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 | `/binote:tasks`    | Decompose `plan.md` into an ordered `tasks.md` with `[P]` parallel markers + acceptance.      |
 | `/binote:verify`   | Audit notes against current source via parallel subagents. Writes reports to `_audit/`.       |
 | `/binote:clarify`  | Find coverage gaps — demand-ranked missing mirrors, orphan notes, empty mirrors, thin design docs, drifted notes. |
+| `/binote:drift`    | One bounded tick of the sedimentation loop: repair stale notes, write demanded mirrors, link orphans, commit. Pair with `/loop 30m /binote:drift`. |
 | `/binote:analyze`  | Cross-note consistency: do dependents respect `_constitution.md` / `_design/` invariants?     |
 | `/binote:ignore`   | Append binote's private artifacts (cache, logs, audits) to `.gitignore`.                      |
 
@@ -224,6 +225,7 @@ Prefer full project-relative paths: `[[src/core/scanner.ts]]`, not `[[scanner]]`
 
 7. After a refactor, `binote sync` finds orphans.
 8. `/binote:clarify` finds coverage gaps; `/binote:verify` audits drifted notes against source; `/binote:analyze` checks cross-note consistency.
+9. **Or automate the whole write side**: `/loop 30m /binote:drift` — each tick repairs the worst drift, writes the most-demanded missing mirrors, links orphans, and commits; exits quietly when the graph is healthy. Sedimentation stops depending on anyone remembering `/binote:save`.
 
 ## Design principles
 

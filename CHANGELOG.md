@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 
+## [0.4.1] - 2026-07-07
+
+### Features
+
+- New `/binote:drift` command — one bounded tick of the write-side sedimentation loop: detect (audit_status + knowledge_gaps) → repair stale notes / write demand-ranked missing mirrors / link orphans via parallel subagents → integrity-check dangling links → commit .binote changes. Designed for `/loop 30m /binote:drift`; costs 2 tool calls and exits quietly when the graph is healthy
+
 ## [0.4.0] - 2026-07-03
 
 ### Features
