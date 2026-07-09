@@ -16,7 +16,8 @@ import { stalenessFor, markVerified } from "./core/meta.js";
 import { parseFrontmatter } from "./core/frontmatter.js";
 import { applyIgnore, PRIVATE_PATHS } from "./core/gitignore.js";
 import { emptyNoteHint, expandGraph, attachStaleness, collectIds, renderGraph, type GraphNode } from "./core/graph-read.js";
-import { ensureDir } from "./util/fs-helpers.js";
+import { ensureDir, appendLog } from "./util/fs-helpers.js";
+import { readDemand } from "./core/read-demand.js";
 import { pkg } from "./util/pkg.js";
 import type { Staleness } from "./types.js";
 
@@ -27,6 +28,13 @@ const server = new McpServer({
 
 const jsonText = (obj: unknown) =>
   ({ content: [{ type: "text" as const, text: JSON.stringify(obj, null, 2) }] });
+
+const dateStamp = () => new Date().toISOString().slice(0, 10);
+const sessionLogPath = (sessionsDir: string) => join(sessionsDir, `${dateStamp()}.jsonl`);
+
+/** Revealed read demand outweighs latent graph demand in fused rankings. */
+const READ_DEMAND_WEIGHT = 2;
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 // ── init ──────────────────────────────────────────────────────────────
 
@@ -214,6 +222,19 @@ server.registerTool(
     };
 
     const { text, isError } = await makeResult();
+
+    // Log the read demand — paths requested, not the bodies returned. The old
+    // (pre-0.4.0) logger persisted full result content, which is why it was
+    // dropped; this lean record is all the demand ranker needs. Field name
+    // `input` is kept so older session logs stay consumable.
+    const input = notePaths && notePaths.length > 0 ? notePaths : notePath ? [notePath] : [];
+    if (input.length > 0) {
+      await appendLog(
+        sessionLogPath(config.sessionsDir),
+        JSON.stringify({ ts: new Date().toISOString(), input, forwardDepth: fDepth, backDepth: bDepth, chars: text.length }) + "\n",
+      ).catch(() => {});
+    }
+
     return { content: [{ type: "text" as const, text }], ...(isError ? { isError } : {}) };
   }
 );
@@ -339,7 +360,7 @@ server.registerTool(
 server.registerTool(
   "audit_status",
   {
-    description: "Report which notes are stale, unverified, or empty — sorted by drift severity. Staleness is git-aware (last commit touching the source vs the note; mtime for dirty files). Each row carries `kind` (file/dir/design/feature/notes/audit/constitution) and `contentLength` (chars of body, excluding frontmatter). Used by /binote:verify (drift) and /binote:clarify (coverage gaps).",
+    description: "Report which notes are stale, unverified, or empty — sorted by drift severity, then by read demand within each level (a stale note agents keep reading ranks above an equally-stale one nobody reads). Staleness is git-aware (last commit touching the source vs the note; mtime for dirty files). Each row carries `kind` (file/dir/design/feature/notes/audit/constitution), `contentLength` (chars of body, excluding frontmatter), and `readFreq` (recency-weighted read count from _sessions/ logs). Used by /binote:verify (drift) and /binote:clarify (coverage gaps).",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       level: z.enum(["fresh", "warning", "stale", "unverified"]).optional().describe("Filter by staleness level. Omit to return all (sorted)."),
@@ -352,7 +373,7 @@ server.registerTool(
     const cap = limit ?? 20;
 
     const allNotes = await scanExistingNotes(config);
-    const [stalenessMap, lengthEntries] = await Promise.all([
+    const [stalenessMap, lengthEntries, demand] = await Promise.all([
       stalenessFor(config, allNotes),
       Promise.all(
         allNotes.map(async (p): Promise<readonly [string, number]> => {
@@ -360,6 +381,7 @@ server.registerTool(
           return [p, raw === null ? 0 : parseFrontmatter(raw).body.trim().length];
         }),
       ),
+      readDemand(config, Date.now()),
     ]);
     const lengthMap: Readonly<Record<string, number>> = Object.fromEntries(lengthEntries);
 
@@ -371,6 +393,7 @@ server.registerTool(
       readonly hint: string;
       readonly kind: ReturnType<typeof classifyNote>;
       readonly contentLength: number;
+      readonly readFreq: number;
     };
 
     const rows: Row[] = Object.entries(stalenessMap).map(([notePath, s]) => ({
@@ -381,20 +404,22 @@ server.registerTool(
       hint: s.hint,
       kind: classifyNote(notePath),
       contentLength: lengthMap[notePath] ?? 0,
+      readFreq: round2(demand[notePath] ?? 0),
     }));
 
     const filtered = rows
       .filter(r => !level || r.level === level)
       .filter(r => !kind || r.kind === kind);
 
-    // Sort: stale > warning > unverified > fresh; within group, larger drift first.
+    // Sort: stale > warning > unverified > fresh; within a level, rank by drift
+    // amplified by read demand — a stale note agents keep reading needs fixing
+    // before an equally-stale note nobody touches. Heavy drift still dominates.
     const levelRank = { stale: 3, warning: 2, unverified: 1, fresh: 0 } as const;
+    const driftScore = (r: Row) => ((r.daysSourceAheadOfNote ?? 0) + 1) * (1 + READ_DEMAND_WEIGHT * r.readFreq);
     const sorted = [...filtered].sort((a, b) => {
       const lr = levelRank[b.level] - levelRank[a.level];
       if (lr !== 0) return lr;
-      const da = a.daysSourceAheadOfNote ?? -1;
-      const db = b.daysSourceAheadOfNote ?? -1;
-      return db - da;
+      return driftScore(b) - driftScore(a);
     });
 
     return jsonText({
@@ -410,7 +435,7 @@ server.registerTool(
 server.registerTool(
   "knowledge_gaps",
   {
-    description: "Demand-ranked sedimentation gaps from the link graph. (1) missingMirrors: dangling [[targets]] that map to real project files, ranked by inbound reference count — the graph is already asking for these notes, write them first. (2) orphanNotes: _notes/ and _design/ notes with zero backlinks — reachable only via search; cite them from the notes that should link there. Used by /binote:clarify.",
+    description: "Demand-ranked sedimentation gaps from the link graph. (1) missingMirrors: dangling [[targets]] that map to real project files, ranked by a fused demandScore = inbound [[ref]] count (latent demand) + read frequency (revealed demand, recency-weighted from _sessions/ read logs) — files agents keep reaching for, or the graph keeps pointing at, get written first. (2) orphanNotes: _notes/ and _design/ notes with zero backlinks — reachable only via search; cite them from the notes that should link there. Used by /binote:clarify.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       limit: z.number().int().positive().optional().describe("Max missing-mirror entries (default: 15)"),
@@ -420,25 +445,32 @@ server.registerTool(
     const config = makeConfig(projectRoot);
     const cap = limit ?? 15;
     const index = await getOrBuildIndex(config);
+    const demand = await readDemand(config, Date.now());
 
     const fileExists = async (rel: string): Promise<boolean> => {
       try { return (await stat(join(config.projectRoot, rel))).isFile(); } catch { return false; }
     };
 
+    // Fused demand: latent graph pull (inbound [[refs]]) + revealed read demand
+    // (how often agents actually tried to read this yet-unwritten note). A file
+    // agents keep reaching for outranks one that is merely linked a lot.
     const missing = (await Promise.all(
       Object.entries(index.dangling).map(async ([raw, refs]) => {
         const candidate = raw.replace(/\.md$/, "");
         if (!(await fileExists(candidate)) || !shouldMirror(candidate)) return null;
+        const readFreq = round2(demand[`${candidate}.md`] ?? 0);
         return {
           projectPath: candidate,
           notePath: `${candidate}.md`,
           inboundRefs: refs.length,
+          readFreq,
+          demandScore: round2(refs.length + READ_DEMAND_WEIGHT * readFreq),
           referencedFrom: [...new Set(refs.map((r) => r.from))].slice(0, 5),
         };
       }),
     ))
       .filter((x): x is NonNullable<typeof x> => x !== null)
-      .sort((a, b) => b.inboundRefs - a.inboundRefs);
+      .sort((a, b) => b.demandScore - a.demandScore || b.inboundRefs - a.inboundRefs);
 
     const notes = await scanExistingNotes(config);
     const orphanNotes = notes

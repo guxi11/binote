@@ -43,7 +43,7 @@ Predicates live in [[src/core/binote-paths.ts]]:
 
 1. **The index is derived, never authoritative.** `_index.json` can be deleted at any time and rebuilt from notes. See [[src/core/link-index.ts]].
 2. **Frontmatter is metadata only.** Body content never lives in frontmatter. The only currently-defined field is `lastVerified: <ISO>`.
-3. **Reads at the MCP boundary are logged.** `read_note` writes to `.binote/_sessions/<date>.jsonl`. The CLI is not logged (CLI is for humans). See [[src/index.ts]].
+3. **Reads at the MCP boundary are logged.** `read_note` appends a **lean** record — `{ ts, input (paths requested), forwardDepth, backDepth, chars }`, one line of JSONL — to `.binote/_sessions/<date>.jsonl`. It logs *what was asked for*, never the bodies returned (the pre-0.4.0 logger persisted full result content; that was dropped for weight and restored in this lean form by feature 001). The CLI is not logged (CLI is for humans). This log is the revealed-demand signal feeding retrieval ranking (see **Retrieval demand signal**). See [[src/index.ts]], [[src/core/read-demand.ts]].
 4. **Path conventions live in one module.** All path↔note↔link↔directory math is in [[src/core/binote-paths.ts]]. No other module duplicates this logic.
 5. **No persistent meta sidecar.** Staleness, backlinks, and the link graph are computed on demand from notes + source mtimes + frontmatter. Adding a `_meta/` shadow tree is explicitly out of scope.
 6. **Backlinks are opt-in on the read path.** Forward links are cheap traversal; backlinks are noisy reverse samples. Default `backDepth: 0`.
@@ -58,6 +58,7 @@ Entry points are both surfaces of the same handler set — anything the MCP serv
 - **Scanning**: [[src/core/scanner.ts]] — splits "scan project tree" from "scan note tree". Project scan honors the ignore list; note scan does not.
 - **Indexing**: [[src/core/link-index.ts]] — single-pass `[[link]]` extraction, line-aware, dangling-tracking. Versioned via `INDEX_VERSION` ([[src/types.ts]]); mismatched cache silently rebuilds. Backlinks are derived in the same pass as forward links.
 - **Search**: [[src/core/search.ts]] — full-text scan over notes. Per-hit link enrichment uses the cached index when fresh, falls back to inline re-resolution when stale.
+- **Read demand**: [[src/core/read-demand.ts]] — consumes `_sessions/*.jsonl` into a recency-weighted per-path read frequency (`readDemand`). Parses both the current compact JSONL and the pre-0.4.0 pretty-printed logs (brace-depth scanner). Pure over injected `now`; nothing persisted. Fused into `knowledge_gaps` and `audit_status` ranking.
 - **Sync**: [[src/core/sync-engine.ts]] — orphan detection only (source file deleted, mirror note survives → prepend `<!-- ORPHANED -->`). No rename detection by design; renames are a write-time concern handled by the agent.
 
 ## Data flow
@@ -73,10 +74,10 @@ input notePath
   → if depth>0  : expandNote (recursive, cycle-safe via visited Set)
                   → attachStaleness in one batch
                   → return graph
-  → appendLog (.binote/_sessions/<date>.jsonl)
+  → appendLog (.binote/_sessions/<date>.jsonl) — lean: requested paths + depths + char count, best-effort (failures swallowed)
 ```
 
-Forward expansion follows resolved `[[links]]`. Backward expansion is included only when `backDepth: 1` and **does not** continue the forward chain — backlink neighbours are leaves.
+The log records the roots the agent explicitly requested, not the notes reached by `[[link]]` expansion — asking to read X is demand for X, not for its neighbours. Forward expansion follows resolved `[[links]]`. Backward expansion is included only when `backDepth: 1` and **does not** continue the forward chain — backlink neighbours are leaves.
 
 ### Write path (`write_note`)
 
@@ -105,13 +106,14 @@ rebuildIndex
 | Tool             | Purpose                                                      | Notes                                                              |
 | ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------------ |
 | `init`           | Scaffold `.binote/` from project tree                        | Idempotent; safe to re-run                                         |
-| `read_note`      | Read note(s) with optional forward/backward graph expansion | **Logged** to `_sessions/`. `forwardDepth: 1` is the recommended default for entering a file. |
+| `read_note`      | Read note(s) with optional forward/backward graph expansion | **Logged** (lean) to `_sessions/`. `forwardDepth: 1` is the recommended default for entering a file. |
 | `write_note`     | Create/update a note                                         | Invalidates index                                                  |
 | `search`         | Full-text search with per-line link enrichment              | Hits include resolved `[[link]]` targets on the matched line       |
 | `sync`           | Mark orphaned notes, rebuild index                           | Pure detection; no destructive deletion                            |
 | `rebuild_index`  | Force index rebuild without LLM token cost                   | Use after bulk writes                                              |
 | `mark_verified`  | Stamp `lastVerified` into frontmatter                        | Used by `/binote:verify` after audit                               |
-| `audit_status`   | Report stale/unverified notes ranked by drift                | Read-only; on-demand mtime + frontmatter inspection                |
+| `audit_status`   | Report stale/unverified notes ranked by demand-weighted drift | Read-only; drift × read demand within each level. Carries `readFreq` per row. |
+| `knowledge_gaps` | Demand-ranked sedimentation gaps (missing mirrors + orphan notes) | `missingMirrors` ranked by `demandScore` = inbound refs + read demand. Used by `/binote:clarify`. |
 | `ignore`         | Append private artifacts to `.gitignore`                     | Idempotent; notes themselves stay tracked                          |
 | `list_notes`     | Enumerate `.binote/`                                         | No content read                                                    |
 
@@ -151,7 +153,21 @@ Three signals, all computed on demand:
 
 Derived levels: `fresh | warning | stale | unverified`. The classifier lives in `core/meta.ts` (referenced by [[src/index.ts]] via `stalenessFor`). See [[src/types.ts]] `StalenessInputs` / `Staleness` for the contract.
 
-`audit_status` ranks: `stale > warning > unverified > fresh`, then by `daysSourceAheadOfNote` descending.
+`audit_status` ranks: `stale > warning > unverified > fresh`, then within a level by demand-weighted drift `(daysSourceAheadOfNote + 1) × (1 + W·readFreq)` descending — a stale note agents keep reading outranks an equally-stale one nobody touches, but heavy drift still dominates a cold note. See **Retrieval demand signal**.
+
+## Retrieval demand signal
+
+Two demand sources rank where curation effort should go, so the `[[link]]` tax is spent only on load-bearing notes:
+
+- **Latent demand** — inbound `[[link]]` count from the graph. The graph is already pointing at these notes.
+- **Revealed demand** — recency-weighted read frequency from `_sessions/*.jsonl` (invariant 3). What agents *actually* reached for, whether or not the graph links it. The stronger signal, so weighted above latent demand (`W = 2`).
+
+[[src/core/read-demand.ts]] `readDemand(config, now, halfLife=21d)` folds the logs into a per-path `readFreq` (exponential recency decay: `0.5^(ageDays/halfLife)`; stale logs fade rather than cut off). Two consumers fuse it, both in [[src/index.ts]]:
+
+- `knowledge_gaps.missingMirrors` → `demandScore = inboundRefs + W·readFreq` (a yet-unwritten note agents keep trying to read beats one that is merely linked a lot).
+- `audit_status` → drift amplified by `readFreq` within each staleness level.
+
+Constitution-compatible: the signal is **computed on demand from the logs, never persisted** — no derived read-count sidecar (invariant 5, §8). Origin: feature `_features/001-tiered-retrieval` Phase 2 (the demand bridge). Phases 1 (hybrid semantic search) and 3 (import graph seeding) remain unbuilt.
 
 ## What is explicitly out of scope
 

@@ -1,8 +1,14 @@
-import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
+import { mkdir, readFile, writeFile, unlink, appendFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export const ensureDir = (dirPath: string): Promise<void> =>
   mkdir(dirPath, { recursive: true }).then(() => undefined);
+
+/** Append one line to a log file, mkdir-ing its parent. Caller swallows failures. */
+export const appendLog = async (path: string, line: string): Promise<void> => {
+  await ensureDir(join(path, ".."));
+  await appendFile(path, line, "utf-8");
+};
 
 export const readFileSafe = async (path: string): Promise<string | null> => {
   try {

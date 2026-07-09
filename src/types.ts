@@ -6,6 +6,8 @@ export type BinoteConfig = {
   readonly notesDir: string;
   readonly indexPath: string;
   readonly auditDir: string;
+  /** Per-day read logs (jsonl). read_note appends here; demand ranking consumes it. */
+  readonly sessionsDir: string;
   readonly ignore: readonly string[];
 };
 
