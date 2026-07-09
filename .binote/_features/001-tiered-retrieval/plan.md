@@ -68,9 +68,16 @@
   - [[src/index.ts]] `knowledge_gaps.missingMirrors` 融合 `demandScore = inboundRefs + 2·readFreq`;`audit_status` 层内按 `(drift+1)·(1+2·readFreq)` 排序。
   - [[src/types.ts]] `BinoteConfig.sessionsDir`;[[src/core/binote-paths.ts]] `makeConfig`;[[src/util/fs-helpers.ts]] `appendLog`。
   - 边界变更已写回 [[_design/architecture.md]](invariant-3、Module map、Retrieval demand signal 节、工具表补 `knowledge_gaps`)。无新依赖,`INDEX_VERSION` 未 bump(读需求不入 `_index.json`,合 §5/§8)。
-- **Phase 1 — 未做**(需先定嵌入后端 + 缓存裁决)。
+- **Phase 1 — DONE.** 混合搜索(Tier 0 召回网)已落地,按裁决 A:
+  - [[src/core/embeddings.ts]](新)`semanticRank()`:本地量化模型(默认 `Xenova/multilingual-e5-small`,384 维 q8——笔记中英混排,多语言是硬需求;`BINOTE_EMBED_MODEL` 可换)。整篇笔记即 chunk(8k 字符截断),e5 非对称前缀(`query:`/`passage:`)。
+  - **可选依赖,静默降级**:`@huggingface/transformers` 进 `optionalDependencies`,动态 `import()` + 进程级 memoize(含失败)。包缺失/下载失败/`BINOTE_NO_EMBED=1` → 返回 null → [[src/core/search.ts]] 走原词法路径,行为与 Phase 1 前逐字节一致。接口收敛为一个函数而非 `SearchBackend` class 层级(两个后端不值得抽象税)。
+  - [[src/core/search.ts]] RRF 融合(k=60):词法榜 ⊕ 语义榜 → top N,hit 带 `via: lexical|semantic|both`。两路全空才落 substring 兜底。语义命中无匹配词 → 展示笔记头部(摘要所在)。
+  - 缓存 `.binote/_embeddings/<model>.json`(schema `EmbeddingsCache` @ [[src/types.ts]],`EMBEDDINGS_VERSION=1`):按 body sha1 逐条失效(比 mtime 稳,git checkout 不误伤),version/model 不符整体作废,删除的笔记随全量重写自然剪枝。`INDEX_VERSION` 未 bump(链接索引 schema 未变)。[[src/core/binote-paths.ts]] `embeddingsDir`;[[src/core/gitignore.ts]] `PRIVATE_PATHS` 加 `_embeddings/`。
+  - 模型权重缓存在 `~/.cache/binote/models`(插件安装目录可能只读);`HF_ENDPOINT` 支持镜像(墙内 `https://hf-mirror.com` 实测通)。
+  - 验收:本仓 33 篇笔记,冷启动(镜像下载模型+全量编码)~3min 一次性;热进程 ~0.7s。CJK NL query("笔记内容过期腐烂了怎么排优先级")词法零命中(MiniSearch 不分词 CJK)、语义召回 spec/plan 等 staleness 相关笔记 ✅。原验收目标 `binote-paths.ts.md` 是**空镜像**,任何搜索都无从召回——空笔记先天不可嵌入,这正是 Phase 2 `knowledge_gaps` 的职责边界,已记入 [[_design/architecture.md]] Semantic recall 节的 Limit。
+  - 裁决已写回:[[_constitution.md]] §8 旁注(嵌入缓存=派生索引,非影子树)+ §11 新条(嵌入依赖必须可选);[[_design/architecture.md]] invariant-1/5/7、Module map、Search path 数据流、工具表 `search` 行、新增 "Semantic recall (Tier 0)" 节。
 - **Phase 3 — 未做**(投机,门槛:Phase 1/2 验证有效后再评估)。
 
 ## Next
 
-`/binote:verify` 审计 Phase 2 触及的笔记;跑通后再评估 `Phase 1`。
+`/binote:verify` 审计 Phase 1 触及的笔记;在真实项目上试用混合搜索,评估质量后再决定 Phase 3 是否立项。

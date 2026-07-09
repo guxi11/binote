@@ -41,12 +41,13 @@ Predicates live in [[src/core/binote-paths.ts]]:
 
 ## Core invariants
 
-1. **The index is derived, never authoritative.** `_index.json` can be deleted at any time and rebuilt from notes. See [[src/core/link-index.ts]].
+1. **The index is derived, never authoritative.** `_index.json` can be deleted at any time and rebuilt from notes. See [[src/core/link-index.ts]]. The same ruling covers the semantic-embedding cache `.binote/_embeddings/` (feature 001 Phase 1): deletable, regenerable from note bodies, invalidated on version/model/content-hash mismatch. See [[src/core/embeddings.ts]] and the constitution §8 side-note.
 2. **Frontmatter is metadata only.** Body content never lives in frontmatter. The only currently-defined field is `lastVerified: <ISO>`.
 3. **Reads at the MCP boundary are logged.** `read_note` appends a **lean** record — `{ ts, input (paths requested), forwardDepth, backDepth, chars }`, one line of JSONL — to `.binote/_sessions/<date>.jsonl`. It logs *what was asked for*, never the bodies returned (the pre-0.4.0 logger persisted full result content; that was dropped for weight and restored in this lean form by feature 001). The CLI is not logged (CLI is for humans). This log is the revealed-demand signal feeding retrieval ranking (see **Retrieval demand signal**). See [[src/index.ts]], [[src/core/read-demand.ts]].
 4. **Path conventions live in one module.** All path↔note↔link↔directory math is in [[src/core/binote-paths.ts]]. No other module duplicates this logic.
-5. **No persistent meta sidecar.** Staleness, backlinks, and the link graph are computed on demand from notes + source mtimes + frontmatter. Adding a `_meta/` shadow tree is explicitly out of scope.
+5. **No persistent meta sidecar.** Staleness, backlinks, and the link graph are computed on demand from notes + source mtimes + frontmatter. Adding a `_meta/` shadow tree is explicitly out of scope. Disposable derived caches (`_index.json`, `_embeddings/`) are not sidecars — they carry no information that is not regenerable from notes.
 6. **Backlinks are opt-in on the read path.** Forward links are cheap traversal; backlinks are noisy reverse samples. Default `backDepth: 0`.
+7. **Semantic recall is strictly optional.** The embedding backend must never be a hard dependency: no network service, no daemon, no required install. When it is absent, `search` degrades silently to the lexical path — same tool, same contract, no error.
 
 ## Module map
 
@@ -57,7 +58,8 @@ Entry points are both surfaces of the same handler set — anything the MCP serv
 - **IO**: [[src/core/note-io.ts]] over [[src/util/fs-helpers.ts]]. Every read returns `string | null` (never throws on miss). Every write goes through `writeFileSafe` which mkdirs.
 - **Scanning**: [[src/core/scanner.ts]] — splits "scan project tree" from "scan note tree". Project scan honors the ignore list; note scan does not.
 - **Indexing**: [[src/core/link-index.ts]] — single-pass `[[link]]` extraction, line-aware, dangling-tracking. Versioned via `INDEX_VERSION` ([[src/types.ts]]); mismatched cache silently rebuilds. Backlinks are derived in the same pass as forward links.
-- **Search**: [[src/core/search.ts]] — full-text scan over notes. Per-hit link enrichment uses the cached index when fresh, falls back to inline re-resolution when stale.
+- **Search**: [[src/core/search.ts]] — hybrid search over notes: MiniSearch lexical ranking RRF-fused with semantic recall when available; substring fallback when both rank to nothing. Per-hit link enrichment uses the cached index when fresh, falls back to inline re-resolution when stale.
+- **Embeddings**: [[src/core/embeddings.ts]] — optional semantic backend (Tier 0 recall net, feature 001 Phase 1). Local quantized model via optional `@huggingface/transformers`; whole-note embedding (the note IS the chunk); derived vector cache under `_embeddings/`; returns null → lexical degradation when unavailable.
 - **Read demand**: [[src/core/read-demand.ts]] — consumes `_sessions/*.jsonl` into a recency-weighted per-path read frequency (`readDemand`). Parses both the current compact JSONL and the pre-0.4.0 pretty-printed logs (brace-depth scanner). Pure over injected `now`; nothing persisted. Fused into `knowledge_gaps` and `audit_status` ranking.
 - **Sync**: [[src/core/sync-engine.ts]] — orphan detection only (source file deleted, mirror note survives → prepend `<!-- ORPHANED -->`). No rename detection by design; renames are a write-time concern handled by the agent.
 
@@ -89,6 +91,16 @@ input (notePath, content)
 
 Index rebuilds lazily on next read. Bulk writes that should batch the rebuild call `rebuild_index` explicitly.
 
+### Search path (`search`, plain query)
+
+```
+notes → MiniSearch rank (lexical)          ┐
+notes → semanticRank (cosine over cached   ├→ RRF fuse (k=60) → top N hits
+        vectors; null if backend absent)   ┘        (via: lexical|semantic|both)
+semantic null → lexical-only (original behavior)
+both empty    → substring line scan
+```
+
 ### Sync path
 
 ```
@@ -108,7 +120,7 @@ rebuildIndex
 | `init`           | Scaffold `.binote/` from project tree                        | Idempotent; safe to re-run                                         |
 | `read_note`      | Read note(s) with optional forward/backward graph expansion | **Logged** (lean) to `_sessions/`. `forwardDepth: 1` is the recommended default for entering a file. |
 | `write_note`     | Create/update a note                                         | Invalidates index                                                  |
-| `search`         | Full-text search with per-line link enrichment              | Hits include resolved `[[link]]` targets on the matched line       |
+| `search`         | Hybrid search (lexical ⊕ semantic RRF) with per-line link enrichment | NL queries recall keyword-less notes when the embedding backend is present; silent lexical degradation otherwise. Hybrid hits carry `via`. |
 | `sync`           | Mark orphaned notes, rebuild index                           | Pure detection; no destructive deletion                            |
 | `rebuild_index`  | Force index rebuild without LLM token cost                   | Use after bulk writes                                              |
 | `mark_verified`  | Stamp `lastVerified` into frontmatter                        | Used by `/binote:verify` after audit                               |
@@ -139,7 +151,7 @@ Defined in [[src/core/binote-paths.ts]]:
 
 - `isDirNote(p)`        — basename is `_dir.md`
 - `isStandaloneNote(p)` — under `_notes/`
-- `isMetaFile(p)`       — `_index.json` or any leading-underscore file (internal artifact)
+- `isMetaFile(p)`       — `_index.json` or any leading-underscore file (internal artifact; covers `_embeddings/`)
 
 `_design/` is not yet a first-class predicate in the path module — it currently classifies as standalone via the leading-underscore convention. If `_design/` needs distinct handling (e.g., authority-aware conflict reporting), that predicate belongs in `binote-paths.ts` alongside the others.
 
@@ -167,15 +179,28 @@ Two demand sources rank where curation effort should go, so the `[[link]]` tax i
 - `knowledge_gaps.missingMirrors` → `demandScore = inboundRefs + W·readFreq` (a yet-unwritten note agents keep trying to read beats one that is merely linked a lot).
 - `audit_status` → drift amplified by `readFreq` within each staleness level.
 
-Constitution-compatible: the signal is **computed on demand from the logs, never persisted** — no derived read-count sidecar (invariant 5, §8). Origin: feature `_features/001-tiered-retrieval` Phase 2 (the demand bridge). Phases 1 (hybrid semantic search) and 3 (import graph seeding) remain unbuilt.
+Constitution-compatible: the signal is **computed on demand from the logs, never persisted** — no derived read-count sidecar (invariant 5, §8). Origin: feature `_features/001-tiered-retrieval` Phase 2 (the demand bridge). Phase 1 (semantic recall, below) landed after it; Phase 3 (import graph seeding) remains unbuilt.
+
+## Semantic recall (Tier 0)
+
+Feature 001 Phase 1. The `[[link]]` graph stays the precision spine (Tier 1); semantic recall is the entry net into uncurated territory — an enhancement of the `search` tool only, never a replacement for graph traversal.
+
+- **Backend**: [[src/core/embeddings.ts]]. Local quantized model (`Xenova/multilingual-e5-small` by default — note corpora are zh/en mixed; override via `BINOTE_EMBED_MODEL`) through the *optional* `@huggingface/transformers` dependency. `BINOTE_NO_EMBED=1` disables; `HF_ENDPOINT` supports mirrors on blocked networks. Model weights live in `~/.cache/binote/models`.
+- **Unit = note.** binote is naturally immune to RAG chunking machinery — one note per file/module is already the retrieval unit. Whole bodies are embedded (8k-char cap); no semantic chunking, no reranker, no RSE.
+- **Fusion**: reciprocal-rank fusion (k=60) of the MiniSearch list and the cosine-similarity list, in [[src/core/search.ts]]. Identifier-ish queries win lexically; NL queries (especially CJK, which MiniSearch cannot tokenize) win semantically; hits carry `via`.
+- **Cache**: `.binote/_embeddings/<model>.json`, schema `EmbeddingsCache` in [[src/types.ts]]. Derived index per §4 (see invariant 1); gitignored via `PRIVATE_PATHS`.
+- **Degradation** (invariant 7): backend absent/failing → `semanticRank` returns null → exact pre-Phase-1 lexical behavior.
+- **Limit**: empty notes are unembeddable — semantic recall cannot surface a mirror nobody has written. That remains `knowledge_gaps`' job (Phase 2), and cold-start coverage is Phase 3's.
 
 ## What is explicitly out of scope
 
 - **Rename detection in sync.** Agents handle renames at write time. Sync only detects deletions.
 - **Persistent backlink storage.** Backlinks are derived from forward links in the same index pass.
-- **A `_meta/` shadow tree.** Frontmatter is the only durable per-note metadata; everything else is computed.
+- **A `_meta/` shadow tree.** Frontmatter is the only durable per-note metadata; everything else is computed. (`_embeddings/` is a disposable derived cache, not durable metadata — see invariant 1.)
 - **Non-`[[link]]` reference syntax.** No `@file`, no inline markdown links as cross-refs.
 - **Multi-project / federated indices.** Each `.binote/` is its own world. Cross-project linking is a separate concern.
+- **ANN retrieval replacing graph traversal.** Vectors only augment `search`; `[[link]]` hops remain the primary read path.
+- **A required embedding dependency.** No external service, no daemon, no mandatory model download (invariant 7).
 
 ## Conventions for evolving this doc
 

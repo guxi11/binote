@@ -11,3 +11,6 @@ dist/
 .binote/_sessions/
 .binote/_audit/
 .binote/_read.log
+
+# binote — local-only artifacts (regenerable / per-developer)
+.binote/_embeddings/

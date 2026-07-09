@@ -1,8 +1,3 @@
----
-name: Binote Project Constitution
-description: Project-wide invariants. Loaded by /binote:mode on activation. Outranks _design/ and source code on conflict.
----
-
 # Binote Constitution
 
 Project-wide invariants. Every proposed change must respect these. When source code, [[_design/architecture.md]], or any other artifact disagrees with this file, **this file wins by intent** — the disagreement is a bug to surface, not silently reconcile.
@@ -35,6 +30,8 @@ When code and `_design/` disagree, surface the gap — never silently reconcile.
 ## 8. No persistent meta sidecar
 Staleness, backlinks, and the link graph are derived from notes + source mtimes + frontmatter. Adding a `_meta/` shadow tree is explicitly out of scope.
 
+> **Side-note (ruled by feature 001 Phase 1):** the semantic-embedding cache `.binote/_embeddings/` is a *derived index* under §4, not a meta sidecar. It carries no information that is not regenerable from note bodies; it is deletable at any time and invalidated on version/model/content-hash mismatch. The §8 prohibition targets durable *metadata* trees; disposable derived *caches* (`_index.json`, `_embeddings/`) are permitted.
+
 ## 9. Authority hierarchy
 
 | Rank | Artifact                          | Role                                              |
@@ -59,3 +56,4 @@ In-flight work lives under `_features/<NNN-slug>/` with `spec.md`, `plan.md`, `t
 - A `_meta/` shadow tree.
 - Non-`[[link]]` reference syntax.
 - Multi-project / federated indices. Each `.binote/` is its own world.
+- A *required* embedding dependency. Semantic recall must stay optional and degrade to lexical search without error.

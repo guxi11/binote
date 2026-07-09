@@ -23,6 +23,7 @@ export const makeConfig = (projectRoot: string, extraIgnore: readonly string[] =
     indexPath: join(binoteDir, "_index.json"),
     auditDir: join(binoteDir, "_audit"),
     sessionsDir: join(binoteDir, "_sessions"),
+    embeddingsDir: join(binoteDir, "_embeddings"),
     ignore: [...DEFAULT_IGNORE, ...extraIgnore],
   };
 };

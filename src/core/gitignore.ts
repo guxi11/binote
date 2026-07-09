@@ -14,6 +14,7 @@ import { readFileSafe, writeFileSafe } from "../util/fs-helpers.js";
  * - _meta.json    — legacy artifact from earlier design; if present, ignore
  * - _sessions/    — per-developer read logs (jsonl)
  * - _audit/       — transient verify reports; rerun /binote:verify to refresh
+ * - _embeddings/  — semantic vector cache; regenerated from note bodies
  * - _read.log     — legacy single-file log (pre-_sessions)
  */
 export const PRIVATE_PATHS: readonly string[] = [
@@ -21,6 +22,7 @@ export const PRIVATE_PATHS: readonly string[] = [
   ".binote/_meta.json",
   ".binote/_sessions/",
   ".binote/_audit/",
+  ".binote/_embeddings/",
   ".binote/_read.log",
 ];
 

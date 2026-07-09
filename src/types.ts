@@ -1,4 +1,5 @@
 export const INDEX_VERSION = 3 as const;
+export const EMBEDDINGS_VERSION = 1 as const;
 
 export type BinoteConfig = {
   readonly projectRoot: string;
@@ -8,6 +9,8 @@ export type BinoteConfig = {
   readonly auditDir: string;
   /** Per-day read logs (jsonl). read_note appends here; demand ranking consumes it. */
   readonly sessionsDir: string;
+  /** Semantic-embedding cache (derived index, deletable — constitution §4). */
+  readonly embeddingsDir: string;
   readonly ignore: readonly string[];
 };
 
@@ -83,8 +86,24 @@ export type SearchHit = {
   readonly lineContent: string;
   readonly context: string;
   readonly links: readonly MatchedLink[];
-  /** Relevance score (ranked engine only; absent on regex scans). */
+  /** Relevance score (ranked engine only; absent on regex scans).
+   *  MiniSearch score when lexical-only; RRF score when hybrid-fused. */
   readonly score?: number;
+  /** Which recall path surfaced the hit (hybrid fusion only). */
+  readonly via?: "lexical" | "semantic" | "both";
+};
+
+/** Embedding cache file (`.binote/_embeddings/<model>.json`). Derived index,
+ *  never authoritative: deletable and fully regenerable from note bodies, like
+ *  `_index.json` (constitution §4). Invalidated wholesale on version/model
+ *  mismatch, per-entry on note content-hash mismatch. */
+export type EmbeddingsCache = {
+  readonly version: typeof EMBEDDINGS_VERSION;
+  readonly indexVersion: typeof INDEX_VERSION;
+  readonly model: string;
+  readonly dims: number;
+  /** notePath → { sha1 of note body, base64-encoded Float32 unit vector }. */
+  readonly entries: Record<string, { readonly hash: string; readonly vector: string }>;
 };
 
 export type ResolveStrategy = "exact" | "as-is" | "dir" | "basename" | "substring" | "none";

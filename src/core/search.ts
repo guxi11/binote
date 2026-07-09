@@ -7,6 +7,7 @@ import { readNote } from "./note-io.js";
 import { getOrBuildIndex } from "./link-index.js";
 import { resolveLinkDetailed, noteAbsPath } from "./binote-paths.js";
 import { parseFrontmatter } from "./frontmatter.js";
+import { semanticRank } from "./embeddings.js";
 
 const LINK_RE = /\[\[([^\[\]]+)\]\]/g;
 
@@ -131,10 +132,20 @@ const bestLine = (lines: readonly string[], terms: readonly string[], ctx: numbe
 
 // ── search entry point ────────────────────────────────────────────────
 
+/** Reciprocal-rank fusion: score(n) = Σ 1/(K + rank_i), rank 1-based per list. */
+const RRF_K = 60;
+const rrfFuse = (lists: ReadonlyArray<readonly string[]>): ReadonlyMap<string, number> =>
+  lists.reduce((acc, list) => {
+    list.forEach((p, i) => acc.set(p, (acc.get(p) ?? 0) + 1 / (RRF_K + i + 1)));
+    return acc;
+  }, new Map<string, number>());
+
 /**
  * Shared search engine used by both CLI and MCP search tools.
  * Plain queries → MiniSearch (relevance-ranked, fuzzy, path/heading-boosted),
- * with a substring-scan fallback when ranking finds nothing (exact code tokens).
+ * RRF-fused with semantic recall when the local embedding backend is available
+ * (Tier 0 recall net — hits carry `via`). Substring-scan fallback when both
+ * paths find nothing (exact code tokens).
  * regex: true → line scan in note order (no ranking).
  */
 export const searchNotes = async (
@@ -193,21 +204,51 @@ export const searchNotes = async (
 
   const { engine, bodies } = await getEngine(config, notes);
   const ranked = engine.search(query).slice(0, limit);
-  if (ranked.length === 0) {
-    // Tokenizer-hostile queries (exact operators, punctuation) → substring scan.
+  const semantic = await semanticRank(config, bodies, query, limit).catch(() => null);
+
+  const hitAt = (notePath: string, terms: readonly string[]) => {
+    const lines = (bodies.get(notePath) ?? "").split("\n");
+    const w = bestLine(lines, terms, ctx);
+    return { notePath, ...w, links: linksForLine(notePath, w.lineNumber, w.lineContent) };
+  };
+
+  if (semantic === null) {
+    // Lexical-only (embedding backend unavailable) — original behavior.
+    if (ranked.length === 0) {
+      // Tokenizer-hostile queries (exact operators, punctuation) → substring scan.
+      const lower = query.toLowerCase();
+      return scanHits((line) => line.toLowerCase().includes(lower));
+    }
+    return ranked.map((r) => ({
+      ...hitAt(r.id as string, r.terms),
+      score: Math.round(r.score * 100) / 100,
+    }));
+  }
+
+  const lexPaths = ranked.map((r) => r.id as string);
+  const semPaths = semantic.map((h) => h.notePath);
+  const fused = rrfFuse([lexPaths, semPaths]);
+  if (fused.size === 0) {
     const lower = query.toLowerCase();
     return scanHits((line) => line.toLowerCase().includes(lower));
   }
 
-  return ranked.map((r) => {
-    const notePath = r.id as string;
-    const lines = (bodies.get(notePath) ?? "").split("\n");
-    const w = bestLine(lines, r.terms, ctx);
-    return {
-      notePath,
-      ...w,
-      links: linksForLine(notePath, w.lineNumber, w.lineContent),
-      score: Math.round(r.score * 100) / 100,
-    };
-  });
+  const lexByPath = new Map(ranked.map((r) => [r.id as string, r]));
+  const semSet = new Set(semPaths);
+  return [...fused.entries()]
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, limit)
+    .map(([notePath, score]) => {
+      const lex = lexByPath.get(notePath);
+      // Semantic-only hits have no matched terms — bestLine falls back to the
+      // head of the note, which is where binote notes carry their summary.
+      return {
+        ...hitAt(notePath, lex?.terms ?? []),
+        score: Math.round(score * 1000) / 1000,
+        via: (lex ? (semSet.has(notePath) ? "both" : "lexical") : "semantic") as
+          | "lexical"
+          | "semantic"
+          | "both",
+      };
+    });
 };

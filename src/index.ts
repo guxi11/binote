@@ -273,7 +273,7 @@ server.registerTool(
 server.registerTool(
   "search",
   {
-    description: "Relevance-ranked full-text search across all Binote notes (fuzzy + prefix matching, note-path and heading terms boosted). Hits carry a score and the resolved [[link]] targets on the matched line. regex:true switches to an exact line scan (unranked). Plain queries that rank to nothing fall back to a substring scan automatically.",
+    description: "Hybrid search across all Binote notes: lexical ranking (fuzzy + prefix, note-path and heading terms boosted) RRF-fused with semantic recall when a local embedding model is available — natural-language queries hit notes that share no keywords. Hits carry a score, `via` (lexical/semantic/both, hybrid only) and the resolved [[link]] targets on the matched line. regex:true switches to an exact line scan (unranked). Degrades silently to pure lexical when the optional embedding backend is absent; queries that rank to nothing fall back to a substring scan.",
     inputSchema: {
       projectRoot: z.string().describe("Absolute path to the project root"),
       query: z.string().describe("Search query (plain text or regex)"),
