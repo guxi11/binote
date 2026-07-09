@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [0.4.2] - 2026-07-09
+
+### Features
+
+- **retrieval**: read-demand promotion bridge — _sessions read logs now rank knowledge_gaps + audit_status; lean read logging restored (feature 001 Phase 2)
 ## [0.4.1] - 2026-07-07
 
 ### Features
@@ -41,5 +46,8 @@ All notable changes to this project will be documented in this file.
 
 - Add changelog and use changenotes to manage it
 
+[0.4.2]: https://github.com/Guxi11/binote/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/Guxi11/binote/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/Guxi11/binote/compare/v0.1.5...v0.4.0
 [0.1.5]: https://github.com/Guxi11/binote/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/Guxi11/binote/releases/tag/v0.1.4
