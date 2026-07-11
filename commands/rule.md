@@ -16,6 +16,7 @@ This project uses `.binote/` for bidirectional-linked notes. Retrieve to locate,
 3. **When you read a note, default `forwardDepth: 0`** (root note only — cheap). Escalate to `forwardDepth: 1` **only** when entering an unfamiliar subsystem where you need the neighborhood; it returns the root in full plus every [[link]] as an excerpt (median ~28K tokens on a hub note — not a per-file default).
    - Known file / one slice / batch preview → `read_note(notePath: "src/foo.tsx.md")`
    - Unfamiliar subsystem → `read_note(notePath: "src/foo.tsx.md", forwardDepth: 1)`; drill into one neighbor with a follow-up read of that path — **never** `detail: "full"`.
+   - **Large note, one section only:** a `search` hit carries a `heading`. When you need that section, not the whole note, pass `read_note(notePath, section: "<that heading>")` to slice just the preamble + matched section + `links:` line. Engages only on a bare `forwardDepth: 0` read of a note ≥4K chars; an unknown heading degrades to the full note (no error). This closes the search→read loop and is the most commonly missed token saving.
 4. **A file you already understand, or a trivial one-line change:** read source directly, skip the note.
 5. **Never read `.binote/` files directly** with the Read tool — always use `read_note` (fuzzy resolution, staleness banners, cycle-safe graph reads)
 6. If a binote note is empty, fall back to reading source directly
