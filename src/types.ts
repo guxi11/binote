@@ -1,5 +1,5 @@
 export const INDEX_VERSION = 3 as const;
-export const EMBEDDINGS_VERSION = 1 as const;
+export const EMBEDDINGS_VERSION = 2 as const;
 
 export type BinoteConfig = {
   readonly projectRoot: string;
@@ -91,6 +91,8 @@ export type SearchHit = {
   readonly score?: number;
   /** Which recall path surfaced the hit (hybrid fusion only). */
   readonly via?: "lexical" | "semantic" | "both";
+  /** Markdown heading of the section a semantic hit landed in (hybrid only). */
+  readonly heading?: string;
 };
 
 /** Embedding cache file (`.binote/_embeddings/<model>.json`). Derived index,
@@ -102,8 +104,15 @@ export type EmbeddingsCache = {
   readonly indexVersion: typeof INDEX_VERSION;
   readonly model: string;
   readonly dims: number;
-  /** notePath → { sha1 of note body, base64-encoded Float32 unit vector }. */
-  readonly entries: Record<string, { readonly hash: string; readonly vector: string }>;
+  /** notePath → { sha1 of note body, per-section chunk vectors (base64 Float32
+   *  unit vectors) tagged with the markdown heading they came from }. */
+  readonly entries: Record<
+    string,
+    {
+      readonly hash: string;
+      readonly chunks: ReadonlyArray<{ readonly heading: string; readonly vector: string }>;
+    }
+  >;
 };
 
 export type ResolveStrategy = "exact" | "as-is" | "dir" | "basename" | "substring" | "none";

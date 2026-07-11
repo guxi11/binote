@@ -51,7 +51,7 @@ Notes are plain markdown with `[[bidirectional links]]`:
 Entry point. Orchestrates [[src/utils/helpers.ts]] and follows [[_design/architecture.md]].
 ```
 
-`read_note(notePath, forwardDepth: 1)` returns the note in full **plus every linked note as an excerpt** (description + first paragraph + heading outline + a `links:` nav line) — the recommended default when entering a file. Drill into a specific neighbour with a follow-up read; `detail: "full"` inlines whole bodies when you really want them.
+`read_note(notePath)` defaults to `forwardDepth: 0` — the note body only, cheap. Locate with `search` first (hybrid lexical + local semantic embeddings), then read the one or two notes it surfaces. Escalate to `read_note(notePath, forwardDepth: 1)` **only** when entering an unfamiliar subsystem: it returns the note in full **plus every linked note as an excerpt** (description + first paragraph + heading outline + a `links:` nav line) — token-heavy on a hub note, not a per-file reflex. Drill into a specific neighbour with a follow-up read; `detail: "full"` inlines whole bodies when you really want them.
 
 ## Authority hierarchy
 

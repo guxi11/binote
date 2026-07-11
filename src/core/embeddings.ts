@@ -24,12 +24,23 @@ import { readFileSafe, writeFileSafe } from "../util/fs-helpers.js";
  */
 
 const DEFAULT_MODEL = "Xenova/multilingual-e5-small";
-/** ≈ model context (512 tokens) with headroom; embedding the head of a note is
- *  enough — binote notes front-load their summary. */
+/** Hard ceiling per embedded passage — defensive only; structure-aware chunks
+ *  are already ≤ CHUNK_TARGET_CHARS, so this just caps a pathological monster
+ *  line before it reaches the model. */
 const MAX_PASSAGE_CHARS = 8_000;
 const BATCH_SIZE = 8;
+/** Structure-aware chunk cap. e5 truncates at 512 tokens (~1.5–2.5K chars, less
+ *  for CJK); keep every section under it so no section's tail is silently
+ *  dropped. Sections above this are sub-split on paragraph breaks. */
+const CHUNK_TARGET_CHARS = 1_400;
+const HEADING_RE = /^#{1,6}\s/;
 
-export type SemanticHit = { readonly notePath: string; readonly similarity: number };
+export type SemanticHit = {
+  readonly notePath: string;
+  readonly similarity: number;
+  /** Heading of the best-matching section ("" for pre-heading preamble). */
+  readonly heading?: string;
+};
 
 type Embedder = (texts: readonly string[]) => Promise<readonly Float32Array[]>;
 
@@ -122,11 +133,65 @@ const chunk = <T>(xs: readonly T[], size: number): T[][] =>
     xs.slice(i * size, (i + 1) * size)
   );
 
+type NoteChunk = { readonly heading: string; readonly text: string };
+
+/** Greedy-pack paragraphs of an oversized section up to `max` chars; a single
+ *  paragraph longer than `max` is hard-sliced (last resort). */
+const packParagraphs = (text: string, max: number): readonly string[] => {
+  const out: string[] = [];
+  let buf = "";
+  const flush = () => {
+    if (buf) out.push(buf);
+    buf = "";
+  };
+  for (const p of text.split(/\n\s*\n/)) {
+    if (p.length > max) {
+      flush();
+      for (let i = 0; i < p.length; i += max) out.push(p.slice(i, i + max));
+    } else {
+      if (buf.length + p.length + 2 > max) flush();
+      buf = buf ? `${buf}\n\n${p}` : p;
+    }
+  }
+  flush();
+  return out;
+};
+
+/**
+ * Split a note body into embeddable chunks at markdown heading boundaries —
+ * binote notes are authored markdown, so heading seams are topic seams (free,
+ * meaningful boundaries, no model needed). Pre-heading preamble becomes its own
+ * chunk (heading ""). Sections above the model window are sub-split on paragraph
+ * breaks so no section tail is lost to truncation.
+ */
+const chunkNote = (body: string): readonly NoteChunk[] => {
+  const sections: Array<{ heading: string; lines: string[] }> = [];
+  let cur = { heading: "", lines: [] as string[] };
+  for (const line of body.split("\n")) {
+    if (HEADING_RE.test(line)) {
+      if (cur.heading || cur.lines.some((l) => l.trim())) sections.push(cur);
+      cur = { heading: line.replace(/^#{1,6}\s+/, "").trim(), lines: [line] };
+    } else cur.lines.push(line);
+  }
+  sections.push(cur);
+  return sections
+    .map((s) => ({ heading: s.heading, text: s.lines.join("\n").trim() }))
+    .filter((s) => s.text.length > 0)
+    .flatMap((s) =>
+      s.text.length <= CHUNK_TARGET_CHARS
+        ? [s]
+        : packParagraphs(s.text, CHUNK_TARGET_CHARS).map((text) => ({ heading: s.heading, text }))
+    );
+};
+
 /**
  * Rank notes by cosine similarity to the query (vectors are unit-normalized,
- * so dot = cosine). Re-embeds only notes whose body hash changed; prunes
- * deleted notes from the cache as a side effect of the full rewrite.
- * Returns null when the semantic backend is unavailable.
+ * so dot = cosine). Each note is embedded per markdown section (structure-aware
+ * chunking); a note's score is the MAX cosine over its section vectors, so a
+ * query matching any single section surfaces the whole note — no section tail
+ * goes dark past the model window. Re-embeds only notes whose body hash changed;
+ * prunes deleted notes via the full rewrite. Returns null when the semantic
+ * backend is unavailable.
  */
 export const semanticRank = async (
   config: BinoteConfig,
@@ -137,40 +202,74 @@ export const semanticRank = async (
   const embed = await loadEmbedder();
   if (!embed) return null;
 
-  // e5 models are asymmetric: passages and queries carry distinct prefixes.
+  type Vec = { readonly heading: string; readonly vector: Float32Array };
   const cached = await loadCache(config);
-  const vectors = new Map<string, Float32Array>();
+  const noteVecs = new Map<string, Vec[]>();
   const hashes = new Map<string, string>();
-  const stale: Array<readonly [string, string]> = [];
+  // Cache-miss chunks flattened for batched embedding, with backrefs to regroup.
+  const staleRefs: Array<{ readonly notePath: string; readonly heading: string }> = [];
+  const staleTexts: string[] = [];
+
   for (const [notePath, body] of bodies) {
     if (!body.trim()) continue;
     const hash = sha1(body);
     hashes.set(notePath, hash);
     const entry = cached[notePath];
-    if (entry && entry.hash === hash) vectors.set(notePath, b64ToVec(entry.vector));
-    else stale.push([notePath, body]);
+    if (entry && entry.hash === hash) {
+      noteVecs.set(
+        notePath,
+        entry.chunks.map((c) => ({ heading: c.heading, vector: b64ToVec(c.vector) }))
+      );
+    } else {
+      noteVecs.set(notePath, []);
+      for (const c of chunkNote(body)) {
+        staleRefs.push({ notePath, heading: c.heading });
+        // e5 asymmetry: passages carry a distinct prefix from queries.
+        staleTexts.push(`passage: ${c.text.slice(0, MAX_PASSAGE_CHARS)}`);
+      }
+    }
   }
-  for (const batch of chunk(stale, BATCH_SIZE)) {
-    const vecs = await embed(batch.map(([, body]) => `passage: ${body.slice(0, MAX_PASSAGE_CHARS)}`));
-    batch.forEach(([notePath], i) => vectors.set(notePath, vecs[i]!));
+
+  for (const batch of chunk(
+    staleTexts.map((text, i) => ({ text, ref: staleRefs[i]! })),
+    BATCH_SIZE
+  )) {
+    const vecs = await embed(batch.map((b) => b.text));
+    batch.forEach((b, i) =>
+      noteVecs.get(b.ref.notePath)!.push({ heading: b.ref.heading, vector: vecs[i]! })
+    );
   }
-  if (vectors.size === 0) return [];
+
+  const ranked = [...noteVecs].filter(([, vs]) => vs.length > 0);
+  if (ranked.length === 0) return [];
 
   const [queryVec] = await embed([`query: ${query}`]);
   if (!queryVec) return [];
 
-  if (stale.length > 0 || Object.keys(cached).length !== vectors.size) {
+  if (staleTexts.length > 0 || Object.keys(cached).length !== noteVecs.size) {
     const entries = Object.fromEntries(
-      [...vectors].map(([notePath, v]) => [
+      ranked.map(([notePath, vs]) => [
         notePath,
-        { hash: hashes.get(notePath)!, vector: vecToB64(v) },
+        {
+          hash: hashes.get(notePath)!,
+          chunks: vs.map((v) => ({ heading: v.heading, vector: vecToB64(v.vector) })),
+        },
       ])
     );
     await saveCache(config, queryVec.length, entries).catch(() => undefined);
   }
 
-  return [...vectors]
-    .map(([notePath, v]) => ({ notePath, similarity: dot(queryVec, v) }))
+  return ranked
+    .map(([notePath, vs]) => {
+      const best = vs.reduce(
+        (acc, v) => {
+          const sim = dot(queryVec, v.vector);
+          return sim > acc.sim ? { sim, heading: v.heading } : acc;
+        },
+        { sim: -Infinity, heading: "" }
+      );
+      return { notePath, similarity: best.sim, heading: best.heading || undefined };
+    })
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, limit);
 };

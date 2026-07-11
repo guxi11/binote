@@ -212,6 +212,16 @@ export const searchNotes = async (
     return { notePath, ...w, links: linksForLine(notePath, w.lineNumber, w.lineContent) };
   };
 
+  // Semantic-only hit: jump to the section that matched, not the note head.
+  const hitAtHeading = (notePath: string, heading: string) => {
+    const lines = (bodies.get(notePath) ?? "").split("\n");
+    const i = lines.findIndex(
+      (l) => /^#{1,6}\s/.test(l) && l.replace(/^#{1,6}\s+/, "").trim() === heading
+    );
+    const w = windowAt(lines, i >= 0 ? i : 0, ctx);
+    return { notePath, ...w, links: linksForLine(notePath, w.lineNumber, w.lineContent) };
+  };
+
   if (semantic === null) {
     // Lexical-only (embedding backend unavailable) — original behavior.
     if (ranked.length === 0) {
@@ -234,21 +244,29 @@ export const searchNotes = async (
   }
 
   const lexByPath = new Map(ranked.map((r) => [r.id as string, r]));
+  const semByPath = new Map(semantic.map((h) => [h.notePath, h]));
   const semSet = new Set(semPaths);
   return [...fused.entries()]
     .sort(([, a], [, b]) => b - a)
     .slice(0, limit)
     .map(([notePath, score]) => {
       const lex = lexByPath.get(notePath);
-      // Semantic-only hits have no matched terms — bestLine falls back to the
-      // head of the note, which is where binote notes carry their summary.
+      const sem = semByPath.get(notePath);
+      // Lexical terms locate the line precisely; a semantic-only hit jumps to
+      // its matched section (else the note head, where the summary lives).
+      const base = lex
+        ? hitAt(notePath, lex.terms)
+        : sem?.heading
+          ? hitAtHeading(notePath, sem.heading)
+          : hitAt(notePath, []);
       return {
-        ...hitAt(notePath, lex?.terms ?? []),
+        ...base,
         score: Math.round(score * 1000) / 1000,
         via: (lex ? (semSet.has(notePath) ? "both" : "lexical") : "semantic") as
           | "lexical"
           | "semantic"
           | "both",
+        heading: sem?.heading,
       };
     });
 };

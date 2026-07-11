@@ -8,14 +8,15 @@ From this point forward in the conversation, follow these rules:
 
 ## Core Rule
 
-**Always read the `.binote/` note before reading a source file.**
+**Search to locate, read the note on demand (default `forwardDepth: 0`), then read source.** Do not reflexively pull the link graph for every file — `forwardDepth: 1` on a hub note costs ~28K tokens and is the biggest context sink.
 
 When the user mentions or references a file path (e.g. `@src/core/scanner.ts`, `src/core/scanner.ts`, or just "the scanner module"):
 
-1. Call `read_note(notePath: "<path>.md", forwardDepth: 1)` first — pulls the note in full plus each [[link]] target as a compact excerpt
-2. If the path is a directory, use `read_note(notePath: "<path>/_dir.md", forwardDepth: 1)`
-3. Only then read the actual source file if the binote note doesn't have enough context
-4. To go deeper on one linked note, issue a follow-up `read_note` of that path (excerpts carry a `links:` nav line); avoid `detail: "full"` unless you truly need every body inline
+1. **To find the right note when the path is fuzzy or the topic spans files**, call `search` first — it is hybrid (BM25 + local semantic embeddings, RRF-fused), so it matches by meaning. One ranked query beats a fan-out of speculative reads.
+2. Call `read_note(notePath: "<path>.md")` — **`forwardDepth: 0` by default**, the note body only.
+3. Escalate to `read_note(notePath: "<path>.md", forwardDepth: 1)` **only** when entering an unfamiliar subsystem where you need the neighborhood (root in full + each [[link]] as an excerpt). Directories → `read_note(notePath: "<path>/_dir.md", forwardDepth: 1)`.
+4. To go deeper on one linked note, issue a follow-up `read_note` of that path (excerpts carry a `links:` nav line); avoid `detail: "full"` unless you truly need every body inline.
+5. A file you already understand, or a trivial one-line change: read source directly.
 
 **`backDepth` is opt-in.** Set `backDepth: 1` when answering "who depends on / references this note?". Default 0. (_audit reports are excluded from the link graph, so backlinks are clean.)
 
