@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { EMBEDDINGS_VERSION, INDEX_VERSION } from "../types.js";
 import type { BinoteConfig, EmbeddingsCache } from "../types.js";
 import { readFileSafe, writeFileSafe } from "../util/fs-helpers.js";
+import { chunkNote } from "./chunk.js";
 
 /**
  * Semantic recall backend (feature 001 Phase 1 — Tier 0 recall net).
@@ -29,11 +30,6 @@ const DEFAULT_MODEL = "Xenova/multilingual-e5-small";
  *  line before it reaches the model. */
 const MAX_PASSAGE_CHARS = 8_000;
 const BATCH_SIZE = 8;
-/** Structure-aware chunk cap. e5 truncates at 512 tokens (~1.5–2.5K chars, less
- *  for CJK); keep every section under it so no section's tail is silently
- *  dropped. Sections above this are sub-split on paragraph breaks. */
-const CHUNK_TARGET_CHARS = 1_400;
-const HEADING_RE = /^#{1,6}\s/;
 
 export type SemanticHit = {
   readonly notePath: string;
@@ -132,57 +128,6 @@ const chunk = <T>(xs: readonly T[], size: number): T[][] =>
   Array.from({ length: Math.ceil(xs.length / size) }, (_, i) =>
     xs.slice(i * size, (i + 1) * size)
   );
-
-type NoteChunk = { readonly heading: string; readonly text: string };
-
-/** Greedy-pack paragraphs of an oversized section up to `max` chars; a single
- *  paragraph longer than `max` is hard-sliced (last resort). */
-const packParagraphs = (text: string, max: number): readonly string[] => {
-  const out: string[] = [];
-  let buf = "";
-  const flush = () => {
-    if (buf) out.push(buf);
-    buf = "";
-  };
-  for (const p of text.split(/\n\s*\n/)) {
-    if (p.length > max) {
-      flush();
-      for (let i = 0; i < p.length; i += max) out.push(p.slice(i, i + max));
-    } else {
-      if (buf.length + p.length + 2 > max) flush();
-      buf = buf ? `${buf}\n\n${p}` : p;
-    }
-  }
-  flush();
-  return out;
-};
-
-/**
- * Split a note body into embeddable chunks at markdown heading boundaries —
- * binote notes are authored markdown, so heading seams are topic seams (free,
- * meaningful boundaries, no model needed). Pre-heading preamble becomes its own
- * chunk (heading ""). Sections above the model window are sub-split on paragraph
- * breaks so no section tail is lost to truncation.
- */
-const chunkNote = (body: string): readonly NoteChunk[] => {
-  const sections: Array<{ heading: string; lines: string[] }> = [];
-  let cur = { heading: "", lines: [] as string[] };
-  for (const line of body.split("\n")) {
-    if (HEADING_RE.test(line)) {
-      if (cur.heading || cur.lines.some((l) => l.trim())) sections.push(cur);
-      cur = { heading: line.replace(/^#{1,6}\s+/, "").trim(), lines: [line] };
-    } else cur.lines.push(line);
-  }
-  sections.push(cur);
-  return sections
-    .map((s) => ({ heading: s.heading, text: s.lines.join("\n").trim() }))
-    .filter((s) => s.text.length > 0)
-    .flatMap((s) =>
-      s.text.length <= CHUNK_TARGET_CHARS
-        ? [s]
-        : packParagraphs(s.text, CHUNK_TARGET_CHARS).map((text) => ({ heading: s.heading, text }))
-    );
-};
 
 /**
  * Rank notes by cosine similarity to the query (vectors are unit-normalized,

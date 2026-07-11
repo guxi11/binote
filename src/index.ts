@@ -15,7 +15,8 @@ import { sync } from "./core/sync-engine.js";
 import { stalenessFor, markVerified } from "./core/meta.js";
 import { parseFrontmatter } from "./core/frontmatter.js";
 import { applyIgnore, PRIVATE_PATHS } from "./core/gitignore.js";
-import { emptyNoteHint, expandGraph, attachStaleness, collectIds, renderGraph, type GraphNode } from "./core/graph-read.js";
+import { emptyNoteHint, expandGraph, attachStaleness, collectIds, renderGraph, linksLine, resolvedOutLinks, stalenessBanner, type GraphNode } from "./core/graph-read.js";
+import { sliceSections, normalizeHeading, SECTION_GATE_CHARS } from "./core/chunk.js";
 import { ensureDir, appendLog } from "./util/fs-helpers.js";
 import { readDemand } from "./core/read-demand.js";
 import { pkg } from "./util/pkg.js";
@@ -100,14 +101,6 @@ const sliceWindow = (text: string, path: string, from?: number, to?: number): st
   return `# lines ${lo}-${hi} of total ${lines.length} in ${path}\n${lines.slice(lo - 1, hi).join("\n")}`;
 };
 
-/** Strip frontmatter, then either show body or fall back to emptyNoteHint. */
-const renderFlatNote = (text: string, path: string, from?: number, to?: number): string => {
-  const { body } = parseFrontmatter(text);
-  return body.trim().length === 0
-    ? emptyNoteHint(path)
-    : sliceWindow(body, path, from, to);
-};
-
 /** Try exact notePath, fall back to resolveLinkDetailed if not found. */
 const resolveNotePath = async (
   config: ReturnType<typeof makeConfig>,
@@ -140,30 +133,56 @@ server.registerTool(
       notePaths: z.array(z.string()).optional().describe("Batch read — shares visited set across all roots"),
       from: z.number().int().positive().optional().describe("1-indexed start line (inclusive, flat reads only)"),
       to: z.number().int().positive().optional().describe("1-indexed end line (inclusive, flat reads only)"),
+      section: z.union([z.string(), z.array(z.string())]).optional().describe("Section heading(s) to scope a large-note read to — pass the `heading` a search hit returned to read just that section (+ leading preamble + links: line) instead of the whole note, cutting the token cost of big mirrors. Only engages on a bare forwardDepth=0 read of a note ≥4K chars; an unknown heading degrades to the full note (no error). Ignored when from/to is set."),
       forwardDepth: z.number().int().min(0).max(3).optional().describe("Forward [[link]] expansion. 0 = note only (default, cheap). 1 = root + linked excerpts, for entering an unfamiliar subsystem (token-heavy, not a per-file reflex). 2+ rare."),
       backDepth: z.number().int().min(0).max(1).optional().describe("Backlink expansion. 0 = ignore (default). 1 = include incoming refs ('who depends on me')."),
       detail: z.enum(["excerpt", "full"]).optional().describe("Linked-node rendering. Default 'excerpt' (compact); 'full' inlines whole bodies (token-expensive)."),
       depth: z.number().int().min(0).max(3).optional().describe("DEPRECATED legacy alias. Maps to forwardDepth (backDepth stays 0). Prefer the explicit params."),
     },
   },
-  async ({ projectRoot, notePath, notePaths, from, to, forwardDepth, backDepth, detail, depth }) => {
+  async ({ projectRoot, notePath, notePaths, from, to, section, forwardDepth, backDepth, detail, depth }) => {
     const config = makeConfig(projectRoot);
     const fDepth = forwardDepth ?? depth ?? 0;
     const bDepth = backDepth ?? 0;
     const isFlat = fDepth === 0 && bDepth === 0;
 
+    const sectionList = section === undefined
+      ? undefined
+      : (Array.isArray(section) ? section : [section]).map(normalizeHeading).filter((s) => s.length > 0);
+
     const resolve = (p: string) => resolveNotePath(config, p);
 
-    // Flat path: render plain text, optionally prepend a staleness banner.
-    const readFlat = async (p: string): Promise<{ path: string; text: string } | null> => {
+    // Strip frontmatter, then body / section-slice / line-window / emptyNoteHint.
+    // Section-scoped read (feature 002) engages only on a bare read of a large note:
+    // slice preamble + matched section(s), append the note's links: nav line (the
+    // inline [[links]] got cut with the body); an unknown heading degrades to full.
+    const renderFlatBody = async (path: string, raw: string, sections?: readonly string[]): Promise<string> => {
+      const { body } = parseFrontmatter(raw);
+      if (body.trim().length === 0) return emptyNoteHint(path);
+      if (sections && sections.length > 0 && from === undefined && to === undefined
+          && body.length >= SECTION_GATE_CHARS) {
+        const sliced = sliceSections(body, sections, { window: 0 });
+        if (sliced === null) {
+          const label = sections.map((s) => `"${s}"`).join(", ");
+          return `> section ${label} not found — returning full note\n\n${body}`;
+        }
+        const outLinks = resolvedOutLinks(await getOrBuildIndex(config), path);
+        return outLinks.length > 0 ? `${sliced}\n\n${linksLine(outLinks)}` : sliced;
+      }
+      return sliceWindow(body, path, from, to);
+    };
+
+    // Flat path: render plain text, optionally prepend a staleness banner. Section
+    // scoping is passed only for the single-note read (a heading is note-specific).
+    const readFlat = async (p: string, sections?: readonly string[]): Promise<{ path: string; text: string } | null> => {
       const r = await resolve(p);
       if (!r) return null;
       const c = await readNote(config, r.path);
       if (c === null) return null;
-      const rendered = renderFlatNote(c, r.path, from, to);
+      const rendered = await renderFlatBody(r.path, c, sections);
       const stale = (await stalenessFor(config, [r.path]))[r.path];
       const text = stale && (stale.level === "warning" || stale.level === "stale")
-        ? `<!-- staleness: ${stale.hint} -->\n${rendered}`
+        ? `${stalenessBanner(stale.hint)}\n${rendered}`
         : rendered;
       return { path: r.path, text };
     };
@@ -209,7 +228,7 @@ server.registerTool(
       if (!notePath) return { text: "Provide notePath or notePaths", isError: true };
 
       if (isFlat) {
-        const flat = await readFlat(notePath);
+        const flat = await readFlat(notePath, sectionList);
         return flat === null
           ? { text: `Note not found: ${notePath}`, isError: true }
           : { text: flat.text };

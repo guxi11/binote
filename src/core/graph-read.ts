@@ -120,11 +120,20 @@ export const collectIds = (node: GraphNode, out: Set<string>): void => {
 
 const MAX_SHOWN_LINKS = 15;
 
-const linksLine = (outLinks: readonly string[]): string => {
+/** The `links:` nav line — shared by graph excerpts and section-scoped reads, so
+ *  a body whose inline [[links]] got cut still carries the note's out-edges. */
+export const linksLine = (outLinks: readonly string[]): string => {
   const shown = outLinks.slice(0, MAX_SHOWN_LINKS);
   const more = outLinks.length - shown.length;
   return `links: ${shown.map((l) => `[[${l}]]`).join(" ")}${more > 0 ? ` (+${more} more)` : ""}`;
 };
+
+/** Resolved, deduped out-links for a note from the index — the input to linksLine. */
+export const resolvedOutLinks = (index: LinkIndex, id: string): readonly string[] =>
+  [...new Set((index.links[id] ?? []).filter((r) => r.resolved !== null).map((r) => r.resolved!))];
+
+/** Staleness banner comment — one form for both flat and graph renders. */
+export const stalenessBanner = (hint: string): string => `<!-- staleness: ${hint} -->`;
 
 const renderNode = (n: GraphNode, level: number, arrow: string): string => {
   const h = "#".repeat(Math.min(level, 6));
@@ -132,7 +141,7 @@ const renderNode = (n: GraphNode, level: number, arrow: string): string => {
 
   const head = `${h} ${arrow}${n.id}${n.excerpted ? " (excerpt)" : ""}`;
   const parts = [head];
-  if (n.staleness) parts.push(`<!-- staleness: ${n.staleness.hint} -->`);
+  if (n.staleness) parts.push(stalenessBanner(n.staleness.hint));
   parts.push(n.body);
   // Excerpts drop inline [[links]] with the body — restore them as a nav line.
   if (n.excerpted && n.outLinks.length > 0) parts.push(linksLine(n.outLinks));

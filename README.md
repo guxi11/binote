@@ -51,7 +51,7 @@ Notes are plain markdown with `[[bidirectional links]]`:
 Entry point. Orchestrates [[src/utils/helpers.ts]] and follows [[_design/architecture.md]].
 ```
 
-`read_note(notePath)` defaults to `forwardDepth: 0` — the note body only, cheap. Locate with `search` first (hybrid lexical + local semantic embeddings), then read the one or two notes it surfaces. Escalate to `read_note(notePath, forwardDepth: 1)` **only** when entering an unfamiliar subsystem: it returns the note in full **plus every linked note as an excerpt** (description + first paragraph + heading outline + a `links:` nav line) — token-heavy on a hub note, not a per-file reflex. Drill into a specific neighbour with a follow-up read; `detail: "full"` inlines whole bodies when you really want them.
+`read_note(notePath)` defaults to `forwardDepth: 0` — the note body only, cheap. Locate with `search` first (hybrid lexical + local semantic embeddings), then read the one or two notes it surfaces. When a hit lands in a large note, `search` returns the matched `heading`; pass it straight back as `read_note(notePath, section: "<heading>")` (or an array for the top-k) to read just that section — plus the note's leading preamble and its `links:` line — instead of the whole body. It engages only on a bare read of a note ≥4K chars and degrades to the full note on an unknown heading, so it is always safe to pass. Escalate to `read_note(notePath, forwardDepth: 1)` **only** when entering an unfamiliar subsystem: it returns the note in full **plus every linked note as an excerpt** (description + first paragraph + heading outline + a `links:` nav line) — token-heavy on a hub note, not a per-file reflex. Drill into a specific neighbour with a follow-up read; `detail: "full"` inlines whole bodies when you really want them.
 
 ## Authority hierarchy
 
@@ -162,7 +162,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 | Tool             | Purpose                                                                  |
 | ---------------- | ------------------------------------------------------------------------ |
 | `init`           | Scaffold `.binote/` from project tree (gitignore-aware scan). Idempotent. |
-| `read_note`      | Graph read: root in full, linked/backlinked nodes as excerpts (`detail: "full"` opts out). Markdown output. |
+| `read_note`      | Graph read: root in full, linked/backlinked nodes as excerpts (`detail: "full"` opts out). `section: "<heading>"` scopes a large note to one section (+ preamble + `links:`). Markdown output. |
 | `write_note`     | Create/update a note. Invalidates the index.                             |
 | `search`         | Relevance-ranked full-text search (fuzzy, path/heading-boosted); hits carry scores + resolved `[[links]]`. `regex: true` for exact line scans. |
 | `sync`           | Detect orphaned notes (source deleted, mirror survives). No rename guess. |

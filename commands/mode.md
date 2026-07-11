@@ -14,9 +14,10 @@ When the user mentions or references a file path (e.g. `@src/core/scanner.ts`, `
 
 1. **To find the right note when the path is fuzzy or the topic spans files**, call `search` first — it is hybrid (BM25 + local semantic embeddings, RRF-fused), so it matches by meaning. One ranked query beats a fan-out of speculative reads.
 2. Call `read_note(notePath: "<path>.md")` — **`forwardDepth: 0` by default**, the note body only.
-3. Escalate to `read_note(notePath: "<path>.md", forwardDepth: 1)` **only** when entering an unfamiliar subsystem where you need the neighborhood (root in full + each [[link]] as an excerpt). Directories → `read_note(notePath: "<path>/_dir.md", forwardDepth: 1)`.
-4. To go deeper on one linked note, issue a follow-up `read_note` of that path (excerpts carry a `links:` nav line); avoid `detail: "full"` unless you truly need every body inline.
-5. A file you already understand, or a trivial one-line change: read source directly.
+3. When `search` surfaced a big note (mirrors of large source files run 80–90K chars) and its hit carried a `heading`, close the loop: `read_note(notePath: "<path>.md", section: "<that heading>")` returns just that section (+ the note's leading preamble + its `links:` line) instead of the whole body. Pass an array of headings for the top-k hits. Only engages on a bare read of a note ≥4K chars; an unknown heading degrades to the full note. This aligns read granularity with recall granularity — don't pay for the whole mountain when `search` pinned one seam.
+4. Escalate to `read_note(notePath: "<path>.md", forwardDepth: 1)` **only** when entering an unfamiliar subsystem where you need the neighborhood (root in full + each [[link]] as an excerpt). Directories → `read_note(notePath: "<path>/_dir.md", forwardDepth: 1)`.
+5. To go deeper on one linked note, issue a follow-up `read_note` of that path (excerpts carry a `links:` nav line); avoid `detail: "full"` unless you truly need every body inline.
+6. A file you already understand, or a trivial one-line change: read source directly.
 
 **`backDepth` is opt-in.** Set `backDepth: 1` when answering "who depends on / references this note?". Default 0. (_audit reports are excluded from the link graph, so backlinks are clean.)
 
