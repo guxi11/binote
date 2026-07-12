@@ -46,6 +46,25 @@ export const splitSections = (body: string): readonly NoteChunk[] => {
     .filter((s) => s.text.length > 0);
 };
 
+/**
+ * Table-of-contents for a large note: its preamble text plus the heading seam of
+ * every section (with each section's char weight, so the reader can judge which
+ * one is worth pulling). Cut on the SAME ruler as `sliceSections`, so every
+ * heading listed here is a valid `section` anchor. Returns null when there are
+ * fewer than two headings — nothing to choose between, so a bare read is already
+ * as cheap as it gets and the caller should just return the full body.
+ */
+export const noteOutline = (
+  body: string
+): { readonly preamble: string; readonly sections: readonly { readonly heading: string; readonly chars: number }[] } | null => {
+  const secs = splitSections(body);
+  const preamble = secs.find((s) => s.heading === "")?.text ?? "";
+  const sections = secs
+    .filter((s) => s.heading.length > 0)
+    .map((s) => ({ heading: s.heading, chars: s.text.length }));
+  return sections.length >= 2 ? { preamble, sections } : null;
+};
+
 /** Greedy-pack paragraphs of an oversized section up to `max` chars; a single
  *  paragraph longer than `max` is hard-sliced (last resort). */
 const packParagraphs = (text: string, max: number): readonly string[] => {

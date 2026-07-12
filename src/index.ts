@@ -16,7 +16,7 @@ import { stalenessFor, markVerified } from "./core/meta.js";
 import { parseFrontmatter } from "./core/frontmatter.js";
 import { applyIgnore, PRIVATE_PATHS } from "./core/gitignore.js";
 import { emptyNoteHint, expandGraph, attachStaleness, collectIds, renderGraph, linksLine, resolvedOutLinks, stalenessBanner, type GraphNode } from "./core/graph-read.js";
-import { sliceSections, normalizeHeading, SECTION_GATE_CHARS } from "./core/chunk.js";
+import { sliceSections, noteOutline, normalizeHeading, SECTION_GATE_CHARS } from "./core/chunk.js";
 import { ensureDir, appendLog } from "./util/fs-helpers.js";
 import { readDemand } from "./core/read-demand.js";
 import { pkg } from "./util/pkg.js";
@@ -119,7 +119,7 @@ server.registerTool(
       "Read one or more Binote notes via the link graph. Auto-resolves [[link]] targets with fuzzy fallback. Output is markdown.",
       "",
       "Pick depths intentionally — locate with `search` first (hybrid lexical+semantic), then read on demand:",
-      "- forwardDepth=0 → DEFAULT: the note body only. Use for a known file, a slice, or a batch preview. Cheap.",
+      "- forwardDepth=0 → DEFAULT: the note body only. Cheap. A single-note read of a LARGE multi-heading note (≥4K body chars) returns its OUTLINE (preamble + section seams with char weights), not the full dump — re-read with section:\"<heading>\" for one section, or section:\"__full__\" for the whole body. Small notes, batch reads, and line-window (from/to) reads return the body verbatim.",
       "- forwardDepth=1 → entering an UNFAMILIAR subsystem where you need the neighborhood: root note in full, each [[linked]] note as a compact excerpt (description + first paragraph + heading outline + its `links:` line). ~28K tokens on a hub note — not a per-file reflex. Drill into any excerpt with a follow-up read of that path.",
       "- forwardDepth=2-3 → rare; tracing a causal chain (excerpts throughout)",
       "- backDepth=1 → \"who depends on / references me?\" — incoming refs as excerpts, expanded for the requested note only (_audit reports no longer pollute backlinks)",
@@ -156,11 +156,11 @@ server.registerTool(
     // Section-scoped read (feature 002) engages only on a bare read of a large note:
     // slice preamble + matched section(s), append the note's links: nav line (the
     // inline [[links]] got cut with the body); an unknown heading degrades to full.
-    const renderFlatBody = async (path: string, raw: string, sections?: readonly string[]): Promise<string> => {
+    const renderFlatBody = async (path: string, raw: string, sections?: readonly string[], autoOutline = false): Promise<string> => {
       const { body } = parseFrontmatter(raw);
       if (body.trim().length === 0) return emptyNoteHint(path);
-      if (sections && sections.length > 0 && from === undefined && to === undefined
-          && body.length >= SECTION_GATE_CHARS) {
+      const big = body.length >= SECTION_GATE_CHARS && from === undefined && to === undefined;
+      if (sections && sections.length > 0 && big) {
         const sliced = sliceSections(body, sections, { window: 0 });
         if (sliced === null) {
           const label = sections.map((s) => `"${s}"`).join(", ");
@@ -169,17 +169,33 @@ server.registerTool(
         const outLinks = resolvedOutLinks(await getOrBuildIndex(config), path);
         return outLinks.length > 0 ? `${sliced}\n\n${linksLine(outLinks)}` : sliced;
       }
+      // Progressive disclosure: a bare read of a large multi-heading note returns its
+      // outline (preamble + section seams), not the full body — the whole-note fd0
+      // dump is the token blackhole. The reader picks one `section` next, or opts back
+      // into the full body with section:"__full__" (an unknown heading degrades to it).
+      if (autoOutline && (!sections || sections.length === 0) && big) {
+        const outline = noteOutline(body);
+        if (outline) {
+          const outLinks = resolvedOutLinks(await getOrBuildIndex(config), path);
+          const pre = outline.preamble.length > 700 ? `${outline.preamble.slice(0, 700)} …` : outline.preamble;
+          const toc = outline.sections.map((s) => `- \`${s.heading}\` · ${s.chars} ch`).join("\n");
+          const hint = `> ⓘ outline only — ${path} body is ${body.length} chars. Re-read with `
+            + `section:"<heading>" for one section, or section:"__full__" for the whole note.`;
+          const links = outLinks.length > 0 ? `\n\n${linksLine(outLinks)}` : "";
+          return `${hint}\n\n${pre}${pre ? "\n\n" : ""}## Sections (${outline.sections.length})\n${toc}${links}`;
+        }
+      }
       return sliceWindow(body, path, from, to);
     };
 
     // Flat path: render plain text, optionally prepend a staleness banner. Section
     // scoping is passed only for the single-note read (a heading is note-specific).
-    const readFlat = async (p: string, sections?: readonly string[]): Promise<{ path: string; text: string } | null> => {
+    const readFlat = async (p: string, sections?: readonly string[], autoOutline = false): Promise<{ path: string; text: string } | null> => {
       const r = await resolve(p);
       if (!r) return null;
       const c = await readNote(config, r.path);
       if (c === null) return null;
-      const rendered = await renderFlatBody(r.path, c, sections);
+      const rendered = await renderFlatBody(r.path, c, sections, autoOutline);
       const stale = (await stalenessFor(config, [r.path]))[r.path];
       const text = stale && (stale.level === "warning" || stale.level === "stale")
         ? `${stalenessBanner(stale.hint)}\n${rendered}`
@@ -228,7 +244,7 @@ server.registerTool(
       if (!notePath) return { text: "Provide notePath or notePaths", isError: true };
 
       if (isFlat) {
-        const flat = await readFlat(notePath, sectionList);
+        const flat = await readFlat(notePath, sectionList, true);
         return flat === null
           ? { text: `Note not found: ${notePath}`, isError: true }
           : { text: flat.text };
