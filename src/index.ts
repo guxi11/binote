@@ -152,22 +152,27 @@ server.registerTool(
 
     const resolve = (p: string) => resolveNotePath(config, p);
 
+    // How a flat single-note read was served — telemetry signal for whether
+    // progressive-disclosure/section slicing actually engaged (the log used to be
+    // blind to it: only `chars` hinted, and a batch-form read never triggered either).
+    type ReadMode = "full" | "outline" | "section" | "section-miss" | "window" | "empty";
+
     // Strip frontmatter, then body / section-slice / line-window / emptyNoteHint.
     // Section-scoped read (feature 002) engages only on a bare read of a large note:
     // slice preamble + matched section(s), append the note's links: nav line (the
     // inline [[links]] got cut with the body); an unknown heading degrades to full.
-    const renderFlatBody = async (path: string, raw: string, sections?: readonly string[], autoOutline = false): Promise<string> => {
+    const renderFlatBody = async (path: string, raw: string, sections?: readonly string[], autoOutline = false): Promise<{ text: string; mode: ReadMode }> => {
       const { body } = parseFrontmatter(raw);
-      if (body.trim().length === 0) return emptyNoteHint(path);
+      if (body.trim().length === 0) return { text: emptyNoteHint(path), mode: "empty" };
       const big = body.length >= SECTION_GATE_CHARS && from === undefined && to === undefined;
       if (sections && sections.length > 0 && big) {
         const sliced = sliceSections(body, sections, { window: 0 });
         if (sliced === null) {
           const label = sections.map((s) => `"${s}"`).join(", ");
-          return `> section ${label} not found — returning full note\n\n${body}`;
+          return { text: `> section ${label} not found — returning full note\n\n${body}`, mode: "section-miss" };
         }
         const outLinks = resolvedOutLinks(await getOrBuildIndex(config), path);
-        return outLinks.length > 0 ? `${sliced}\n\n${linksLine(outLinks)}` : sliced;
+        return { text: outLinks.length > 0 ? `${sliced}\n\n${linksLine(outLinks)}` : sliced, mode: "section" };
       }
       // Progressive disclosure: a bare read of a large multi-heading note returns its
       // outline (preamble + section seams), not the full body — the whole-note fd0
@@ -182,15 +187,15 @@ server.registerTool(
           const hint = `> ⓘ outline only — ${path} body is ${body.length} chars. Re-read with `
             + `section:"<heading>" for one section, or section:"__full__" for the whole note.`;
           const links = outLinks.length > 0 ? `\n\n${linksLine(outLinks)}` : "";
-          return `${hint}\n\n${pre}${pre ? "\n\n" : ""}## Sections (${outline.sections.length})\n${toc}${links}`;
+          return { text: `${hint}\n\n${pre}${pre ? "\n\n" : ""}## Sections (${outline.sections.length})\n${toc}${links}`, mode: "outline" };
         }
       }
-      return sliceWindow(body, path, from, to);
+      return { text: sliceWindow(body, path, from, to), mode: from !== undefined || to !== undefined ? "window" : "full" };
     };
 
     // Flat path: render plain text, optionally prepend a staleness banner. Section
     // scoping is passed only for the single-note read (a heading is note-specific).
-    const readFlat = async (p: string, sections?: readonly string[], autoOutline = false): Promise<{ path: string; text: string } | null> => {
+    const readFlat = async (p: string, sections?: readonly string[], autoOutline = false): Promise<{ path: string; text: string; mode: ReadMode } | null> => {
       const r = await resolve(p);
       if (!r) return null;
       const c = await readNote(config, r.path);
@@ -198,9 +203,9 @@ server.registerTool(
       const rendered = await renderFlatBody(r.path, c, sections, autoOutline);
       const stale = (await stalenessFor(config, [r.path]))[r.path];
       const text = stale && (stale.level === "warning" || stale.level === "stale")
-        ? `${stalenessBanner(stale.hint)}\n${rendered}`
-        : rendered;
-      return { path: r.path, text };
+        ? `${stalenessBanner(stale.hint)}\n${rendered.text}`
+        : rendered.text;
+      return { path: r.path, text, mode: rendered.mode };
     };
 
     // Graph path: expand roots (sequentially — deterministic shared visited set),
@@ -223,51 +228,51 @@ server.registerTool(
       return renderGraph(nodes);
     };
 
-    type Built = { text: string; isError?: boolean };
+    // `notePaths` wins over `notePath` (per the schema). A single-element list is a
+    // single-note read expressed the batch way — collapse both forms to one path list
+    // so a lone `notePaths:[x]` gets outline + `section` slicing instead of a silent
+    // full-body dump (the batch branch is verbatim ONLY for genuine multi-note reads).
+    const effPaths = notePaths && notePaths.length > 0 ? notePaths : notePath ? [notePath] : [];
+    type Built = { text: string; isError?: boolean; mode?: ReadMode };
     const makeResult = async (): Promise<Built> => {
-      if (notePaths && notePaths.length > 0) {
-        if (isFlat) {
-          const sections = await Promise.all(
-            notePaths.map(async (p) => {
-              const r = await readFlat(p);
-              return r ? `# ${r.path}\n\n${r.text}` : `# ${p}\n\n(not found)`;
-            }),
-          );
-          return { text: sections.join("\n\n---\n\n") };
-        }
-        const graph = await readGraph(notePaths);
-        return graph === null
-          ? { text: `No notes found for: ${notePaths.join(", ")}`, isError: true }
-          : { text: graph };
-      }
-
-      if (!notePath) return { text: "Provide notePath or notePaths", isError: true };
+      if (effPaths.length === 0) return { text: "Provide notePath or notePaths", isError: true };
 
       if (isFlat) {
-        const flat = await readFlat(notePath, sectionList, true);
-        return flat === null
-          ? { text: `Note not found: ${notePath}`, isError: true }
-          : { text: flat.text };
+        if (effPaths.length === 1) {
+          const flat = await readFlat(effPaths[0], sectionList, true);
+          return flat === null
+            ? { text: `Note not found: ${effPaths[0]}`, isError: true }
+            : { text: flat.text, mode: flat.mode };
+        }
+        const sections = await Promise.all(
+          effPaths.map(async (p) => {
+            const r = await readFlat(p);
+            return r ? `# ${r.path}\n\n${r.text}` : `# ${p}\n\n(not found)`;
+          }),
+        );
+        return { text: sections.join("\n\n---\n\n") };
       }
 
-      const graph = await readGraph([notePath]);
+      const graph = await readGraph(effPaths);
       return graph === null
-        ? { text: `Note not found: ${notePath}`, isError: true }
+        ? { text: effPaths.length > 1 ? `No notes found for: ${effPaths.join(", ")}` : `Note not found: ${effPaths[0]}`, isError: true }
         : { text: graph };
     };
 
-    const { text, isError } = await makeResult();
+    const { text, isError, mode } = await makeResult();
 
     // Log the read demand — paths requested, not the bodies returned. The old
     // (pre-0.4.0) logger persisted full result content, which is why it was
     // dropped; this lean record is all the demand ranker needs. Field name
-    // `input` is kept so older session logs stay consumable.
-    const input = notePaths && notePaths.length > 0 ? notePaths : notePath ? [notePath] : [];
+    // `input` is kept so older session logs stay consumable. `mode`/`section` are
+    // added only for single-note flat reads, so the log can finally show whether
+    // progressive disclosure / section slicing engaged.
+    const input = effPaths;
     if (input.length > 0) {
-      await appendLog(
-        sessionLogPath(config.sessionsDir),
-        JSON.stringify({ ts: new Date().toISOString(), input, forwardDepth: fDepth, backDepth: bDepth, chars: text.length }) + "\n",
-      ).catch(() => {});
+      const record: Record<string, unknown> = { ts: new Date().toISOString(), input, forwardDepth: fDepth, backDepth: bDepth, chars: text.length };
+      if (mode) record.mode = mode;
+      if (mode && sectionList && sectionList.length > 0) record.section = sectionList;
+      await appendLog(sessionLogPath(config.sessionsDir), JSON.stringify(record) + "\n").catch(() => {});
     }
 
     return { content: [{ type: "text" as const, text }], ...(isError ? { isError } : {}) };
